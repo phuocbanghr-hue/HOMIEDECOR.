@@ -1320,6 +1320,9 @@
   .field-2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   @media (max-width:560px){ .field-2{ grid-template-columns:1fr; gap:0; } }
 
+  .ship-note{ font-size:12px; line-height:1.5; color:var(--navy-soft); margin:8px 0 12px; }
+  .order-summary .row.ship-free > span:last-child{ color:#1a7a3c; font-weight:700; }
+
   /* =====================================================================
      VUI VẺ: bạn Homie nhảy nhảy, nút nhạc, nghiêng 3D
      ===================================================================== */
@@ -1358,8 +1361,8 @@
   .mascot.happy .mg-open, .mascot.dancing .mg-open{ opacity:1; }
   .mascot.happy .mg-smile, .mascot.dancing .mg-smile{ opacity:0; }
   .mg-arm{ transform-box:fill-box; transform-origin:50% 20%; }
-  .mascot.happy .mg-arm-l, .mascot.dancing .mg-arm-l{ animation:mgWaveL .5s ease-in-out infinite; }
-  .mascot.happy .mg-arm-r, .mascot.dancing .mg-arm-r{ animation:mgWaveR .5s ease-in-out infinite; }
+  .mascot.happy .mg-arm-l, .mascot.dancing .mg-arm-l{ animation:mgWaveL .43s ease-in-out infinite; }
+  .mascot.happy .mg-arm-r, .mascot.dancing .mg-arm-r{ animation:mgWaveR .43s ease-in-out infinite; }
   @keyframes mgWaveL{ 0%,100%{ transform:rotate(0deg); } 50%{ transform:rotate(-38deg); } }
   @keyframes mgWaveR{ 0%,100%{ transform:rotate(0deg); } 50%{ transform:rotate(38deg); } }
   .mascot-bubble{
@@ -1491,8 +1494,8 @@
       </a>
       <a href="#products" class="banner-mini banner-voucher">
         <span class="bm-tag"><i class='fa-solid fa-ticket'></i> ƯU ĐÃI</span>
-        <strong>Freeship nội thành</strong>
-        <span>Nhập mã khi lên đơn</span>
+        <strong>Freeship Đà Nẵng</strong>
+        <span>Tự động áp dụng khi đặt hàng</span>
       </a>
     </div>
   </div>
@@ -1712,6 +1715,7 @@
   <div class="drawer-body" id="cartBody"></div>
   <div class="drawer-foot" id="cartFoot" style="display:none;">
     <div class="total-row"><span>Tổng cộng</span><span id="cartTotal">0đ</span></div>
+    <div class="ship-note" id="cartShipNote"></div>
     <button class="btn btn-primary" id="checkoutOpenBtn">Đặt hàng ngay</button>
   </div>
 </aside>
@@ -2261,6 +2265,22 @@ const DISCOUNT_CODES = {
   "FREESHIPHD": 15000,
   "HOMIENEW": 20000,
 };
+// ----- PHÍ VẬN CHUYỂN -----
+// homeProvince: tỉnh/thành được miễn phí ship | otherFee: phí ship các nơi còn lại
+// freeFrom: đơn (sau giảm giá) từ mức này trở lên được miễn phí ship toàn quốc — đặt 0 nếu không muốn áp dụng
+const SHIPPING = { homeProvince: "Đà Nẵng", homeFee: 0, otherFee: 20000, freeFrom: 500000 };
+function hdShipK(n){ return n % 1000 === 0 ? (n / 1000) + 'K' : fmt(n); }
+function hdShipText(){
+  return SHIPPING.homeProvince + ' miễn phí ship, tỉnh/thành khác ' + hdShipK(SHIPPING.otherFee) +
+    (SHIPPING.freeFrom ? ' (đơn từ ' + hdShipK(SHIPPING.freeFrom) + ' miễn phí ship toàn quốc)' : '');
+}
+// Trả về số tiền ship theo tỉnh/thành khách chọn; null nếu chưa chọn
+function getShippingFee(province){
+  if(!province) return null;
+  if(province === SHIPPING.homeProvince) return SHIPPING.homeFee;
+  if(SHIPPING.freeFrom && getDiscountedTotal() >= SHIPPING.freeFrom) return 0;
+  return SHIPPING.otherFee;
+}
 let appliedDiscount = { code: "", amount: 0 };
 function getDiscountedTotal(){
   return Math.max(0, cartTotal() - appliedDiscount.amount);
@@ -2277,6 +2297,19 @@ function hdBindDraft(){
     const save = () => { checkoutDraft[k] = el.value; };
     el.addEventListener('input', save); el.addEventListener('change', save);
   });
+  const ps = document.getElementById('ofProvince');
+  if(ps) ps.addEventListener('change', hdUpdateShip);
+  hdUpdateShip();
+}
+// Cập nhật dòng "Phí vận chuyển" và "Tổng cộng" theo tỉnh/thành đang chọn
+function hdUpdateShip(){
+  const ps = document.getElementById('ofProvince'), sd = document.getElementById('ofShipDisplay'), td = document.getElementById('ofTotalDisplay');
+  if(!ps || !sd || !td) return;
+  const fee = getShippingFee(ps.value);
+  const row = document.getElementById('ofShipRow');
+  if(fee === null){ sd.textContent = 'Chọn tỉnh/thành để tính'; if(row) row.classList.remove('ship-free'); }
+  else { sd.textContent = fee === 0 ? 'Miễn phí' : fmt(fee); if(row) row.classList.toggle('ship-free', fee === 0); }
+  td.textContent = fmt(getDiscountedTotal() + (fee || 0));
 }
 function renderCheckoutForm(){
   checkoutCard.innerHTML = `
@@ -2290,6 +2323,7 @@ function renderCheckoutForm(){
       }).join('')}
       <div class="row"><span>Tạm tính</span><span>${fmt(cartTotal())}</span></div>
       ${appliedDiscount.amount ? `<div class="row" style="color:#1a7a3c;"><span>Mã ${appliedDiscount.code} <button type="button" id="removeDiscountBtn" style="border:none;background:none;color:#c0392b;cursor:pointer;font-size:12px;text-decoration:underline;margin-left:4px;">(xoá)</button></span><span>-${fmt(appliedDiscount.amount)}</span></div>` : ''}
+      <div class="row" id="ofShipRow"><span>Phí vận chuyển</span><span id="ofShipDisplay">Chọn tỉnh/thành để tính</span></div>
       <div class="row total"><span>Tổng cộng</span><span id="ofTotalDisplay">${fmt(getDiscountedTotal())}</span></div>
     </div>
     <div class="field" style="display:flex; gap:8px; align-items:flex-end;">
@@ -2348,6 +2382,7 @@ function renderCheckoutForm(){
     const ward = document.getElementById('ofWard').value.trim();
     const street = document.getElementById('ofStreet').value.trim();
     const addrNote = document.getElementById('ofAddrNote').value.trim();
+    const shippingFee = getShippingFee(province) || 0;
     const orderData = {
       orderId: 'HD' + Date.now().toString().slice(-8),
       name: document.getElementById('ofName').value.trim(),
@@ -2361,7 +2396,9 @@ function renderCheckoutForm(){
       }).join(', '),
       discountCode: appliedDiscount.code,
       discountAmount: appliedDiscount.amount,
-      total: getDiscountedTotal()
+      subtotal: cartTotal(),
+      shippingFee,
+      total: getDiscountedTotal() + shippingFee
     };
     renderPaymentStep(orderData);
   };
@@ -2573,6 +2610,7 @@ function renderPaymentStep(orderData){
       <div class="row"><span>Số tài khoản</span><span><strong>${BANK_CONFIG.accountNumber}</strong><button type="button" class="copy-mini" data-copy="${BANK_CONFIG.accountNumber}" data-label="số tài khoản">Sao chép</button></span></div>
       <div class="row"><span>Chủ tài khoản</span><span>${BANK_CONFIG.accountName}</span></div>
       <div class="row"><span>Số tiền cần chuyển</span><span><strong>${fmt(orderData.total)}</strong><button type="button" class="copy-mini" data-copy="${orderData.total}" data-label="số tiền">Sao chép</button></span></div>
+      <div class="row" style="font-size:12.5px; color:var(--navy-soft);"><span>Đã gồm phí vận chuyển</span><span>${orderData.shippingFee ? fmt(orderData.shippingFee) : 'Miễn phí'}</span></div>
       <div class="row"><span>Nội dung chuyển khoản</span><span><strong>${orderData.orderId}</strong><button type="button" class="copy-mini" data-copy="${orderData.orderId}" data-label="nội dung chuyển khoản">Sao chép</button></span></div>
     </div>
     <button class="btn btn-primary" id="confirmPaidBtn">Tôi đã chuyển khoản</button>
@@ -2590,6 +2628,7 @@ function buildOrderText(orderData){
     `Khách: ${orderData.name} - ${orderData.phone}\n` +
     `Địa chỉ: ${orderData.address}\n` +
     `Sản phẩm: ${orderData.items}\n` +
+    (orderData.shippingFee !== undefined ? `Phí ship: ${orderData.shippingFee ? fmt(orderData.shippingFee) : 'Miễn phí'}\n` : '') +
     `Tổng tiền: ${fmt(orderData.total)}\n` +
     (orderData.note ? `Ghi chú: ${orderData.note}` : '');
 }
@@ -2736,7 +2775,7 @@ document.getElementById('menuToggleBtn').onclick = () => mobileMenu.classList.to
 mobileMenu.querySelectorAll('a').forEach(a => a.onclick = () => mobileMenu.classList.remove('open'));
 
 // Marquee strip content
-const stripItems = ["Miễn phí ship đơn từ 500K","Đổi trả trong 7 ngày","Đóng gói cẩn thận"];
+const stripItems = [SHIPPING.homeProvince + " miễn phí ship", "Tỉnh/thành khác chỉ " + hdShipK(SHIPPING.otherFee) + " ship", "Đổi trả trong 7 ngày", "Đóng gói cẩn thận"];
 const stripTrack = document.getElementById('stripTrack');
 const stripHtml = stripItems.map(t=>`<span>${t}</span><span class="dot"><i class='fa-solid fa-lightbulb'></i></span>`).join('');
 stripTrack.innerHTML = stripHtml + stripHtml;
@@ -2800,7 +2839,7 @@ document.querySelectorAll('.voucher-copy').forEach(btn=>{
 });
 
 const FAQ_ITEMS = [
-  { q: "Thời gian giao hàng mất bao lâu?", a: "Nội thành Đà Nẵng: giao trong 24 giờ. Các tỉnh/thành khác: 2–4 ngày làm việc qua đơn vị vận chuyển. Homie Decor sẽ nhắn xác nhận thời gian cụ thể qua Messenger sau khi chốt đơn." },
+  { q: "Thời gian giao hàng mất bao lâu?", a: "Phí ship: " + hdShipText() + ". Nội thành Đà Nẵng: giao trong 24 giờ. Các tỉnh/thành khác: 2–4 ngày làm việc qua đơn vị vận chuyển. Homie Decor sẽ nhắn xác nhận thời gian cụ thể qua Messenger sau khi chốt đơn." },
   { q: "Tôi có thể đổi trả nếu không ưng ý không?", a: "Được đổi/trả trong vòng 7 ngày kể từ khi nhận hàng nếu sản phẩm lỗi, vỡ do vận chuyển, hoặc giao sai mẫu. Sản phẩm cần còn nguyên bao bì, chưa qua sử dụng." },
   { q: "Thanh toán như thế nào?", a: "Sau khi điền thông tin đặt hàng trên website, bạn sẽ được chuyển sang Messenger của Homie Decor để xác nhận đơn và thanh toán qua chuyển khoản (có mã QR sẵn) hoặc tiền mặt khi nhận hàng (COD) tuỳ khu vực." },
   { q: "Có xuất hoá đơn không?", a: "Có, bạn vui lòng nhắn yêu cầu xuất hoá đơn kèm thông tin công ty/cá nhân khi chốt đơn qua Messenger." },
@@ -2913,7 +2952,7 @@ heroCollage.innerHTML = collageItems.map((p,i)=>`<div class="hc-item hc-${i+1}">
   const flash = document.querySelector('.banner-flash');
   if(flash) flash.insertAdjacentHTML('beforeend', '<img class="bm-art" alt="" src="' + moon.image + '">');
   const vou = document.querySelector('.banner-voucher');
-  if(vou) vou.insertAdjacentHTML('beforeend', '<div class="bm-ticket" aria-hidden="true"><b>FREESHIP</b><small>nội thành Đà Nẵng</small></div>');
+  if(vou) vou.insertAdjacentHTML('beforeend', '<div class="bm-ticket" aria-hidden="true"><b>FREESHIP</b><small>tại Đà Nẵng</small></div>');
   // Ô tìm kiếm trên điện thoại: placeholder ngắn để không bị cắt chữ
   if(window.matchMedia && window.matchMedia('(max-width:620px)').matches){
     const si = document.getElementById('searchInput');
@@ -3235,8 +3274,11 @@ document.addEventListener('keydown', e => {
   art.innerHTML = imgs.map((p, i) => '<div class="qa qa-' + (i + 1) + '"><img src="' + p.image + '" alt=""></div>').join('');
 })();
 
+// Ghi chú phí ship dưới tổng tiền trong giỏ hàng (lấy từ cấu hình SHIPPING)
+(function(){ const n = document.getElementById('cartShipNote'); if(n) n.textContent = 'Chưa gồm phí ship, tính ở bước đặt hàng. ' + hdShipText() + '.'; })();
+
 /* =========================================================
-   VUI VẺ: bạn Homie nhảy nhảy (linh vật 3D hoạt hình) + nhạc nền tự tạo + thẻ sản phẩm nghiêng 3D + pháo giấy
+   VUI VẺ: bạn Homie nhảy nhảy (linh vật 3D hoạt hình) + nhạc nền tự tạo kiểu TikTok/EDM + thẻ sản phẩm nghiêng 3D + pháo giấy
    Công tắc ngay bên dưới. Muốn tắt hẳn phần nào thì đổi thành false.
    ========================================================= */
 const MASCOT_ENABLED = true;    // bạn Homie nhảy nhảy ở góc màn hình
@@ -3290,108 +3332,149 @@ function hdConfetti(x, y, kind, n){
   hdConfettiRAF = requestAnimationFrame(step);
 }
 
-/* ---------- Nhạc nền tự tạo (Web Audio — không cần file, không vướng bản quyền) ---------- */
-const HD_BPM = 82, HD_SIX = 60 / HD_BPM / 4;
+/* ---------- Nhạc nền tự tạo kiểu TikTok / EDM "giật giật" (Web Audio — không cần file, không vướng bản quyền) ---------- */
+// 140 nhịp/phút, giọng La thứ, vòng lặp 8 ô nhịp: 4 ô "build" (thưa dần rồi lên cao trào) + 4 ô "drop" (bass, hook, trống dập).
+// Cuối ô nhịp 4 và 8 có tiếng trống dồn (roll) rồi NGẮT 1 nhịp con rất ngắn -> đúng cú "giật" trước khi nhạc nổ lại.
+const HD_BPM = 140, HD_SIX = 60 / HD_BPM / 4;
 const HD_CHORDS = [
-  { root: 48, notes: [60, 64, 67, 71] },   // Cmaj7
-  { root: 45, notes: [57, 60, 64, 67] },   // Am7
-  { root: 41, notes: [53, 57, 60, 64] },   // Fmaj7
-  { root: 43, notes: [55, 59, 62, 64] }    // G6
+  { root: 45, notes: [57, 60, 64], pool: [69, 72, 76, 81] },   // Am
+  { root: 41, notes: [53, 57, 60], pool: [65, 69, 72, 77] },   // F
+  { root: 48, notes: [55, 60, 64], pool: [72, 76, 79, 84] },   // C
+  { root: 43, notes: [55, 59, 62], pool: [67, 71, 74, 79] }    // G
 ];
-const HD_PENTA = [72, 74, 76, 79, 81, 84];  // C5 D5 E5 G5 A5 C6: thang âm ngũ cung nên nốt nào cũng "hợp"
+const HD_HOOK_STEPS = [0, 2, 3, 6, 8, 10, 11, 14];            // nhịp lệch (syncopation) tạo cảm giác "nảy"
+const HD_HOOKS = [[2, 2, 3, 2, 1, 2, 1, 0], [3, 2, 2, 1, 2, 1, 0, 1]];
 const hdMtof = m => 440 * Math.pow(2, (m - 69) / 12);
-const hdMusic = { ctx: null, bus: null, playing: false, timer: null, next: 0, step: 0, mel: 2, audio: null, level: 0.8 };
+const hdMusic = { ctx: null, bus: null, playing: false, timer: null, next: 0, step: 0, audio: null, level: 0.75 };
 
 function hdMusicBuild(ctx){
   const master = ctx.createGain(); master.gain.value = 0;
-  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 4; comp.attack.value = 0.01; comp.release.value = 0.25;
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 6; comp.attack.value = 0.003; comp.release.value = 0.14;
   master.connect(comp); comp.connect(ctx.destination);
-  const dry = ctx.createGain(); dry.gain.value = 1; dry.connect(master);
-  const keys = ctx.createBiquadFilter(); keys.type = 'lowpass'; keys.frequency.value = 2400; keys.Q.value = 0.6; keys.connect(dry);
-  // vang (reverb) tự tạo từ nhiễu suy giảm dần
-  const len = Math.floor(ctx.sampleRate * 2.2), imp = ctx.createBuffer(2, len, ctx.sampleRate);
-  for(let c = 0; c < 2; c++){ const d = imp.getChannelData(c); for(let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
+  const dry = ctx.createGain(); dry.connect(master);
+  const duck = ctx.createGain(); duck.connect(master);         // bass/hook/stab đi qua đây, bị "nhấn xuống" mỗi lần trống kick (sidechain giả)
+  const len = Math.floor(ctx.sampleRate * 1.1), imp = ctx.createBuffer(2, len, ctx.sampleRate);
+  for(let c = 0; c < 2; c++){ const d = imp.getChannelData(c); for(let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
   const verb = ctx.createConvolver(); verb.buffer = imp;
-  const verbSend = ctx.createGain(); verbSend.gain.value = 0.9; verbSend.connect(verb);
-  const verbOut = ctx.createGain(); verbOut.gain.value = 0.26; verb.connect(verbOut); verbOut.connect(master);
-  // echo
-  const dly = ctx.createDelay(1.5); dly.delayTime.value = 60 / HD_BPM * 0.75;
-  const fb = ctx.createGain(); fb.gain.value = 0.3; const dlp = ctx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 2200;
+  const verbSend = ctx.createGain(); verbSend.connect(verb);
+  const verbOut = ctx.createGain(); verbOut.gain.value = 0.22; verb.connect(verbOut); verbOut.connect(master);
+  const dly = ctx.createDelay(1.0); dly.delayTime.value = 60 / HD_BPM * 0.75;
+  const fb = ctx.createGain(); fb.gain.value = 0.26; const dlp = ctx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 2600;
   dly.connect(dlp); dlp.connect(fb); fb.connect(dly);
-  const dlyOut = ctx.createGain(); dlyOut.gain.value = 0.22; dly.connect(dlyOut); dlyOut.connect(master);
-  const dlySend = ctx.createGain(); dlySend.gain.value = 1; dlySend.connect(dly);
-  // nhiễu trắng dùng cho hi-hat / snare
+  const dlyOut = ctx.createGain(); dlyOut.gain.value = 0.2; dly.connect(dlyOut); dlyOut.connect(master);
+  const dlySend = ctx.createGain(); dlySend.connect(dly);
   const nb = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), nd = nb.getChannelData(0);
   for(let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-  return { master, dry, keys, verbSend, dlySend, noise: nb };
+  return { master, dry, duck, verbSend, dlySend, noise: nb };
 }
 function hdEnv(ctx, g, t, a, peak, dur){
   g.gain.setValueAtTime(0.0001, t);
   g.gain.linearRampToValueAtTime(peak, t + a);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 }
-function hdVoicePiano(ctx, B, f, t, dur, vel){
-  const g = ctx.createGain(); hdEnv(ctx, g, t, 0.012, vel, dur);
-  const o1 = ctx.createOscillator(); o1.type = 'sine'; o1.frequency.value = f;
-  const o2 = ctx.createOscillator(); o2.type = 'triangle'; o2.frequency.value = f * 2; o2.detune.value = 4;
-  const g2 = ctx.createGain(); g2.gain.value = 0.28;
-  o1.connect(g); o2.connect(g2); g2.connect(g);
-  g.connect(B.keys); const s = ctx.createGain(); s.gain.value = 0.55; g.connect(s); s.connect(B.verbSend);
-  o1.start(t); o2.start(t); o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
-}
-function hdVoiceBass(ctx, B, f, t, dur, vel){
-  const g = ctx.createGain(); hdEnv(ctx, g, t, 0.02, vel, dur);
-  const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
-  const o2 = ctx.createOscillator(); o2.type = 'triangle'; o2.frequency.value = f; const g2 = ctx.createGain(); g2.gain.value = 0.25;
-  o.connect(g); o2.connect(g2); g2.connect(g); g.connect(B.dry);
-  o.start(t); o2.start(t); o.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
-}
-function hdVoiceBell(ctx, B, f, t, vel){
-  const g = ctx.createGain(); hdEnv(ctx, g, t, 0.006, vel, 1.5);
-  const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
-  const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2.76; const g2 = ctx.createGain(); g2.gain.value = 0.12;
-  o.connect(g); o2.connect(g2); g2.connect(g);
-  g.connect(B.dry); const s1 = ctx.createGain(); s1.gain.value = 0.6; g.connect(s1); s1.connect(B.verbSend); g.connect(B.dlySend);
-  o.start(t); o2.start(t); o.stop(t + 1.6); o2.stop(t + 1.6);
-}
-function hdVoiceKick(ctx, B, t, vel){
-  const g = ctx.createGain(); hdEnv(ctx, g, t, 0.003, vel, 0.28);
+function hdSend(ctx, node, dest, amt){ const s = ctx.createGain(); s.gain.value = amt; node.connect(s); s.connect(dest); }
+function hdKick(ctx, B, t, vel){
+  const g = ctx.createGain(); hdEnv(ctx, g, t, 0.002, vel, 0.34);
   const o = ctx.createOscillator(); o.type = 'sine';
-  o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.13);
-  o.connect(g); g.connect(B.dry); o.start(t); o.stop(t + 0.3);
+  o.frequency.setValueAtTime(175, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.1);
+  o.connect(g); g.connect(B.dry); o.start(t); o.stop(t + 0.36);
+  const c = ctx.createGain(); hdEnv(ctx, c, t, 0.001, vel * 0.35, 0.03);      // tiếng "cách" đầu kick cho nghe rõ trên loa điện thoại
+  const co = ctx.createOscillator(); co.type = 'triangle';
+  co.frequency.setValueAtTime(1600, t); co.frequency.exponentialRampToValueAtTime(180, t + 0.025);
+  co.connect(c); c.connect(B.dry); co.start(t); co.stop(t + 0.04);
+  B.duck.gain.setValueAtTime(0.25, t); B.duck.gain.linearRampToValueAtTime(1, t + 0.2);
 }
-function hdVoiceNoise(ctx, B, t, dur, freq, type, vel){
+function hdNoise(ctx, B, t, dur, freq, type, vel, verb){
   const s = ctx.createBufferSource(); s.buffer = B.noise;
-  const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = type === 'bandpass' ? 0.8 : 0.4;
+  const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = type === 'bandpass' ? 1.1 : 0.5;
   const g = ctx.createGain(); hdEnv(ctx, g, t, 0.002, vel, dur);
-  s.connect(f); f.connect(g); g.connect(B.dry); s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.02);
+  s.connect(f); f.connect(g); g.connect(B.dry); if(verb) hdSend(ctx, g, B.verbSend, verb);
+  s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.02);
 }
-// Một "ô nhịp" 1/16: nhạc gồm 4 hợp âm x 16 ô = 64 ô rồi lặp lại
+function hdClap(ctx, B, t, vel){ hdNoise(ctx, B, t, 0.02, 1500, 'bandpass', vel * 0.6); hdNoise(ctx, B, t + 0.011, 0.02, 1500, 'bandpass', vel * 0.7); hdNoise(ctx, B, t + 0.022, 0.16, 1500, 'bandpass', vel, 0.5); }
+function hdHat(ctx, B, t, vel, open){ hdNoise(ctx, B, t, open ? 0.2 : 0.035, 8500, 'highpass', vel); }
+function hdSnare(ctx, B, t, vel){
+  hdNoise(ctx, B, t, 0.1, 2200, 'bandpass', vel * 0.7);
+  const g = ctx.createGain(); hdEnv(ctx, g, t, 0.002, vel * 0.5, 0.09);
+  const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(240, t); o.frequency.exponentialRampToValueAtTime(150, t + 0.08);
+  o.connect(g); g.connect(B.dry); o.start(t); o.stop(t + 0.12);
+}
+function hdBass(ctx, B, midi, t, dur, vel){
+  const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hdMtof(midi);
+  const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 6;
+  f.frequency.setValueAtTime(2200, t); f.frequency.exponentialRampToValueAtTime(260, t + dur * 0.9);
+  const g = ctx.createGain(); hdEnv(ctx, g, t, 0.004, vel, dur);
+  o.connect(f); f.connect(g); g.connect(B.duck); o.start(t); o.stop(t + dur + 0.05);
+}
+function hdSub(ctx, B, midi, t, dur, vel){
+  const fr = hdMtof(midi), o = ctx.createOscillator(); o.type = 'sine';
+  o.frequency.setValueAtTime(fr * 1.5, t); o.frequency.exponentialRampToValueAtTime(fr, t + 0.05);
+  const g = ctx.createGain(); hdEnv(ctx, g, t, 0.004, vel, dur);
+  o.connect(g); g.connect(B.duck); o.start(t); o.stop(t + dur + 0.05);
+}
+function hdLead(ctx, B, midi, t, dur, vel){
+  const fr = hdMtof(midi);
+  const flt = ctx.createBiquadFilter(); flt.type = 'lowpass'; flt.Q.value = 1.2;
+  flt.frequency.setValueAtTime(4200, t); flt.frequency.exponentialRampToValueAtTime(1400, t + dur);
+  [-8, 8].forEach(d => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fr; o.detune.value = d; o.connect(flt); o.start(t); o.stop(t + dur + 0.05); });
+  const sq = ctx.createOscillator(); sq.type = 'square'; sq.frequency.value = fr * 2; const sg = ctx.createGain(); sg.gain.value = 0.16; sq.connect(sg); sg.connect(flt); sq.start(t); sq.stop(t + dur + 0.05);
+  const g = ctx.createGain(); hdEnv(ctx, g, t, 0.006, vel, dur);
+  flt.connect(g); g.connect(B.duck); hdSend(ctx, g, B.dlySend, 0.7); hdSend(ctx, g, B.verbSend, 0.35);
+}
+function hdStab(ctx, B, notes, t, dur, vel){
+  const flt = ctx.createBiquadFilter(); flt.type = 'lowpass'; flt.frequency.value = 2600; flt.Q.value = 0.8;
+  notes.forEach(n => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hdMtof(n + 12); o.connect(flt); o.start(t); o.stop(t + dur + 0.05); });
+  const g = ctx.createGain(); hdEnv(ctx, g, t, 0.004, vel, dur);
+  flt.connect(g); g.connect(B.duck); hdSend(ctx, g, B.verbSend, 0.3);
+}
+function hdRiser(ctx, B, t, dur, vel){
+  const s = ctx.createBufferSource(); s.buffer = B.noise; s.loop = true;
+  const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.Q.value = 2;
+  f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(9000, t + dur);
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vel, t + dur);
+  s.connect(f); f.connect(g); g.connect(B.dry); s.start(t); s.stop(t + dur + 0.02);
+}
+// Một "ô nhịp" 1/16: 8 ô nhịp x 16 = 128 ô rồi lặp lại
 function hdMusicStep(ctx, B, step, when, onBeat){
-  const bar = Math.floor(step / 16) % 4, s = step % 16, ch = HD_CHORDS[bar];
-  const t = when + (s % 4 === 2 ? HD_SIX * 0.34 : 0);        // đánh lệch nhẹ tạo cảm giác "swing" thư giãn
-  if(s % 4 === 0 && onBeat) onBeat(when);
-  if(s === 0) ch.notes.forEach((n, i) => hdVoicePiano(ctx, B, hdMtof(n), t + i * 0.012, 2.2, 0.1));
-  if(s === 6 || s === 10) ch.notes.forEach((n, i) => hdVoicePiano(ctx, B, hdMtof(n), t + i * 0.01, 0.9, 0.062));
-  if(s === 0) hdVoiceBass(ctx, B, hdMtof(ch.root), t, 1.5, 0.26);
-  if(s === 8) hdVoiceBass(ctx, B, hdMtof(ch.root + 7), t, 1.0, 0.2);
-  if(s === 0 || s === 8) hdVoiceKick(ctx, B, t, 0.38);
-  if(s === 4 || s === 12) hdVoiceNoise(ctx, B, t, 0.14, 1800, 'bandpass', 0.09);
-  if(s % 2 === 0) hdVoiceNoise(ctx, B, t, 0.045, 7500, 'highpass', s % 4 === 0 ? 0.04 : 0.026);
-  if(s % 2 === 0){
-    const prob = s === 0 ? 0.85 : 0.4;
-    if(Math.random() < prob){
-      const moves = [-2, -1, -1, 0, 1, 1, 2];
-      hdMusic.mel = Math.max(0, Math.min(HD_PENTA.length - 1, hdMusic.mel + moves[(Math.random() * moves.length) | 0]));
-      hdVoiceBell(ctx, B, hdMtof(HD_PENTA[hdMusic.mel]), t, 0.115);
+  const bar = Math.floor(step / 16) % 8, s = step % 16, t = when, six = HD_SIX;
+  const ch = HD_CHORDS[bar % 4], drop = bar >= 4, fill = (bar === 3 || bar === 7), fillCut = fill && s >= 8;
+  if(s % 4 === 0 && onBeat) onBeat(when, s === 0 ? (bar === 4 ? 2 : 1) : 0);
+  if(fill && s === 15) return;                                             // khoảng lặng ngắn = cú "giật"
+  // trống kick
+  if(fill){ if(s === 0 || s === 4 || s === 8) hdKick(ctx, B, t, 0.9); }
+  else if(bar < 2 ? (s === 0 || s === 8) : (s % 4 === 0)) hdKick(ctx, B, t, drop ? 1 : 0.85);
+  if(bar === 4 && s === 0) hdNoise(ctx, B, t, 1.3, 4500, 'highpass', 0.07, 0.6);   // crash lúc vào drop
+  // clap
+  if((bar >= 2 && !fill && (s === 4 || s === 12)) || (bar === 1 && s === 12) || (bar === 3 && s === 4)) hdClap(ctx, B, t, drop ? 0.9 : 0.7);
+  // hi-hat
+  if(!fillCut){
+    if(s % 4 === 2) hdHat(ctx, B, t, drop ? 0.06 : 0.045, drop && s === 14);
+    if(drop && s % 2 === 1) hdHat(ctx, B, t, 0.022, false);
+  }
+  // trống dồn (snare roll) + riser cuối ô nhịp 4 và 8
+  if(fillCut){ for(let k = 0; k < 2; k++) hdSnare(ctx, B, t + k * six / 2, 0.3 + 0.6 * ((s - 8 + k / 2) / 7)); }
+  if(bar === 3 && s === 0) hdRiser(ctx, B, t, 16 * six, 0.13);
+  // bass: nốt gảy lệch nhịp + sub nặng ở đầu ô nhịp trong drop
+  if(bar >= 2 && !fillCut && s % 4 === 2) hdBass(ctx, B, ch.root, t, six * 3.2, drop ? 0.22 : 0.17);
+  if(drop && !fillCut && (s === 0 || s === 10)) hdSub(ctx, B, ch.root - 12, t, six * 3.6, 0.32);
+  // hook (giai điệu chính) — chỉ dùng nốt thuộc hợp âm nên nốt nào cũng "hợp"
+  if(!fillCut){
+    const idx = HD_HOOK_STEPS.indexOf(s);
+    if(idx >= 0){
+      const pat = HD_HOOKS[(bar === 5 || bar === 7) ? 1 : 0], vel = drop ? 0.11 : (bar >= 2 ? 0.08 : 0.06);
+      hdLead(ctx, B, ch.pool[pat[idx]], t, six * (idx % 2 ? 1.6 : 2.2), vel);
     }
   }
+  // stab hợp âm bắt nhịp
+  if(drop && !fillCut && ((bar === 4 && (s === 3 || s === 6)) || ((bar === 5 || bar === 6) && (s === 3 || s === 6 || s === 11 || s === 14)))) hdStab(ctx, B, ch.notes, t, six * 1.6, 0.075);
+  // giật cục (stutter) 4 nốt dồn liên tiếp
+  if((bar === 5 && s === 14) || (bar === 6 && s === 6)) for(let k = 0; k < 4; k++) hdLead(ctx, B, ch.pool[3], t + k * six / 2, six * 0.5, 0.085 * (1 - k * 0.15));
 }
 function hdMusicTick(){
   const m = hdMusic; if(!m.ctx || !m.playing) return;
   while(m.next < m.ctx.currentTime + 0.16){
-    hdMusicStep(m.ctx, m.bus, m.step, m.next, (when) => { setTimeout(hdMascotBeat, Math.max(0, (when - m.ctx.currentTime) * 1000)); });
-    m.next += HD_SIX; m.step = (m.step + 1) % 64;
+    hdMusicStep(m.ctx, m.bus, m.step, m.next, (when, strong) => { setTimeout(() => hdMascotBeat(strong), Math.max(0, (when - m.ctx.currentTime) * 1000)); });
+    m.next += HD_SIX; m.step = (m.step + 1) % 128;
   }
 }
 function hdBlip(kind){   // tiếng "boing" nhỏ khi bạn Homie nhảy (chỉ khi khách đã bật nhạc)
@@ -3461,7 +3544,7 @@ const HD_TIPS = [
   { t: 'Chưa biết chọn món nào? Trả lời 3 câu là mình gợi ý cho bạn nè!', a: 'Chọn giúp mình', fn: () => openQuiz('mascot') },
   { t: 'Đổi trả trong 7 ngày nếu sản phẩm lỗi nha bạn.' },
   { t: 'Có gì thắc mắc cứ hỏi Homie Bot ở góc phải nhé!', a: 'Mở chat', fn: () => hdChatOpen('mascot') },
-  { t: 'Đơn từ 500K được miễn phí ship đó!' },
+  { t: hdShipText() + ' nha bạn!' },
   { t: 'Bật nhạc lên đi, mình nhảy theo cho vui nè!', a: 'Bật nhạc', fn: () => hdMusicToggle(true), skipIfMusic: true },
   { t: 'Thích món nào thì bấm nút chia sẻ để gửi cho bạn bè nha.' }
 ];
@@ -3477,8 +3560,8 @@ function hdMasJump(power, tx){
   m.vx = (target - m.x) / air; m.vy = power; m.state = 'air'; m.sq = 0.55; m.sqv = 0;   // hơi "ngồi xuống" lấy đà
   hdBlip('jump');
 }
-function hdMasBeat(){ const m = hdMas; if(m.off || m.state !== 'idle' || fxReduceMotion()) return; m.vy = 300; m.vx = 0; m.state = 'air'; }
-function hdMascotBeat(){ hdMasBeat(); }
+function hdMasBeat(strong){ const m = hdMas; if(m.off || m.state !== 'idle' || fxReduceMotion()) return; m.vy = strong === 2 ? 640 : (strong === 1 ? 400 : 300); m.vx = 0; m.state = 'air'; if(strong === 2) m.sq = 0.5; }
+function hdMascotBeat(strong){ hdMasBeat(strong); }
 function hdMasSay(tip, ms){
   const m = hdMas; if(m.off || !m.bubble) return;
   clearTimeout(m.bubbleTimer);
@@ -3695,11 +3778,11 @@ function hdBotBrain(raw){
       { intent: 'order_status', actions: ['messenger'], chips: ['Phí ship & giao hàng', 'Đổi trả thế nào?'] });
 
   if(has('voucher', 'ma giam', 'giam gia', 'khuyen mai', 'uu dai', 'coupon', 'sale', 'flash sale', 'freeship', 'free ship', 'giam phi'))
-    return hdReply('Homie có ưu đãi freeship nội thành: bạn nhập mã vào ô <b>Mã giảm giá</b> ở bước điền thông tin đặt hàng. Mã đang áp dụng thì bạn nhắn Messenger để nhân viên gửi nhé.',
+    return hdReply(hdEsc(hdShipText()) + '. Phí ship tự tính khi bạn chọn tỉnh/thành lúc đặt hàng, không cần nhập mã. Còn mã giảm giá thì nhập vào ô <b>Mã giảm giá</b> ở bước điền thông tin đặt hàng; mã đang áp dụng bạn nhắn Messenger để nhân viên gửi nhé.',
       { intent: 'voucher', actions: ['messenger'], chips: ['Cách đặt hàng', 'Sản phẩm dưới 30K'] });
 
   if(has('ship', 'giao hang', 'van chuyen', 'bao lau', 'khi nao nhan', 'bao gio nhan', 'phi giao', 'nhan hang', 'giao toi', 'phi van chuyen'))
-    return hdReply(hdFaq('giao hang', 'Nội thành Đà Nẵng giao trong 24 giờ, các tỉnh khác 2–4 ngày làm việc.') + ' Đơn từ 500K được miễn phí ship.',
+    return hdReply(hdFaq('giao hang', 'Phí ship: ' + hdEsc(hdShipText()) + '. Nội thành Đà Nẵng giao trong 24 giờ, các tỉnh khác 2–4 ngày làm việc.'),
       { intent: 'shipping', chips: ['Đổi trả thế nào?', 'Thanh toán ra sao?', 'Cách đặt hàng'] });
 
   if(has('doi tra', 'doi hang', 'tra hang', 'hoan tien', 'hoan hang', 'bao hanh', 'hang loi', 'bi loi', 'bi vo', 'vo hang', 'hu hong', 'khong vua y', 'khong thich'))
