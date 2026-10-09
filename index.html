@@ -1829,6 +1829,10 @@
   .la-save{ background:linear-gradient(135deg,#ff7a45,#ee4d2d) !important; }
   .la-help{ margin:12px 0 0 18px; color:var(--navy-soft); line-height:1.6; }
   @media (max-width:560px){ .la-row{ grid-template-columns:1fr; } }
+  .oos-badge{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:3; background:rgba(30,30,30,.82); color:#fff; font-weight:800; letter-spacing:.5px; font-size:13px; padding:8px 16px; border-radius:999px; pointer-events:none; }
+  .card.soldout .card-media img{ opacity:.4; filter:grayscale(.6); }
+  .add-btn:disabled{ opacity:.35; cursor:not-allowed; pointer-events:none; }
+  .stock-low{ color:#c0392b; font-weight:700; margin-left:4px; }
 </style>
 </head>
 <body>
@@ -2619,6 +2623,7 @@ function goToProducts(){
 }
 
 // Header quick-links row (Shopee-style small category links under search)
+function hdRenderCats(){
 const quicklinksRow = document.getElementById('quicklinksRow');
 quicklinksRow.innerHTML = categories.slice(1,7).map(c=>`<a data-cat="${c}">${c}</a>`).join('');
 quicklinksRow.querySelectorAll('a').forEach(a=> a.onclick = goToProducts);
@@ -2632,6 +2637,8 @@ catIconGrid.innerHTML = categories.slice(1).map((c,i)=>`
   </button>
 `).join('');
 catIconGrid.querySelectorAll('.cat-icon-item').forEach(btn=> btn.onclick = goToProducts);
+}
+hdRenderCats();
 
 document.getElementById('wishShortcutBtn').onclick = (e) => { e.preventDefault(); wishOnly = true; syncWishOnlyBtn(); renderProducts(); goToProducts(); };
 document.getElementById('sortSelect').onchange = (e) => { hdTrack('sort_change', { label: e.target.value }); renderProducts(); };
@@ -2675,9 +2682,12 @@ function renderProducts(){
     card.className = 'card';
     const discount = p.originalPrice ? Math.round((1 - p.price/p.originalPrice)*100) : 0;
     const isWished = wishlist.has(p.id);
+    const oos = p.hdStock != null && p.hdStock <= 0, lowStock = p.hdStock != null && p.hdStock > 0 && p.hdStock <= 5;
+    if(oos) card.className += ' soldout';
     card.innerHTML = `
       <div class="card-media" style="background:${p.bg}; cursor:zoom-in;" data-zoom-id="${p.id}">
         ${hdCmpCheckHtml(p)}
+        ${oos ? '<div class="oos-badge">HẾT HÀNG</div>' : ''}
         <div class="tag-stack">
           ${p.tag ? `<span class="card-tag ${(p.tag==='NEW'||p.tag==='Mới') ? 'tag-new':'tag-hot'}"><i class="fa-solid fa-sparkles"></i> ${p.tag}</span>`:''}
           ${discount ? `<span class="card-tag tag-sale"><i class="fa-solid fa-fire"></i> -${discount}%</span>` : ''}
@@ -2689,13 +2699,13 @@ function renderProducts(){
         <div class="cat">${p.category}</div>
         <h3>${p.name}</h3>
         <div class="desc">${p.desc}</div>
-        <div class="meta-row">${p.sold > 0 ? `<i class='fa-solid fa-star'></i> ${p.rating} <span>·</span> Đã bán ${p.sold}` : `<i class='fa-solid fa-seedling'></i> Sản phẩm mới`}</div>
+        <div class="meta-row">${p.sold > 0 ? `<i class='fa-solid fa-star'></i> ${p.rating} <span>·</span> Đã bán ${p.sold}` : `<i class='fa-solid fa-seedling'></i> Sản phẩm mới`}${lowStock ? ` <span class="stock-low">Chỉ còn ${p.hdStock} sản phẩm</span>` : ''}</div>
         <div class="card-foot">
           <div>
             ${p.originalPrice ? `<span class="price-old">${fmt(p.originalPrice)}</span>` : ''}
             <span class="price">${fmt(p.price)}</span>
           </div>
-          <button class="add-btn" aria-label="Thêm vào giỏ" data-id="${p.id}"><i class="fa-solid fa-cart-plus"></i></button>
+          <button class="add-btn" aria-label="${oos ? 'Hết hàng' : 'Thêm vào giỏ'}" data-id="${p.id}"${oos ? ' disabled' : ''}><i class="fa-solid fa-cart-plus"></i></button>
         </div>
       </div>
     `;
@@ -2739,6 +2749,11 @@ document.querySelector('.search-go').onclick = () => {
 
 function addToCart(id, src, qty, srcEl){
   qty = qty || 1;
+  { const sp = hdProd(id);
+    if(sp && sp.hdStock != null){
+      if(sp.hdStock <= 0){ fxToast('<b>' + sp.name + '</b> đã hết hàng'); return; }
+      if((cart[id] || 0) + qty > sp.hdStock){ fxToast('Chỉ còn <b>' + sp.hdStock + '</b> sản phẩm ' + sp.name); qty = sp.hdStock - (cart[id] || 0); if(qty <= 0) return; }
+    } }
   const grab = CART_AUTO_OPEN ? null : fxGrabSource(id, src, srcEl);   // chụp vị trí ảnh trước khi giỏ vẽ lại
   cart[id] = (cart[id] || 0) + qty;
   const p = hdProd(id);
@@ -2747,6 +2762,8 @@ function addToCart(id, src, qty, srcEl){
   hdAfterAdd(id, qty, grab);
 }
 function changeQty(id, delta){
+  { const sp = hdProd(id);
+    if(delta > 0 && sp && sp.hdStock != null && (cart[id]||0) + delta > sp.hdStock){ fxToast('Chỉ còn <b>' + sp.hdStock + '</b> sản phẩm ' + sp.name); return; } }
   cart[id] = (cart[id]||0) + delta;
   if(cart[id] <= 0){ delete cart[id]; const rp = hdProd(id); if(rp) hdTrack('remove_from_cart', { productId: rp.id, name: rp.name }); }
   renderCart();
@@ -2927,7 +2944,12 @@ function renderCheckoutForm(){
     const msg = document.getElementById('discountMsg');
     if(!code){ return; }
     hdTrack('voucher_apply', { code: hdCut(code, 30), ok: !!DISCOUNT_CODES[code] });
-    if(DISCOUNT_CODES[code]){
+    const _min = (window.HD_VOUCHER_MIN || {})[code] || 0;
+    if(DISCOUNT_CODES[code] && _min && cartTotal() < _min){
+      appliedDiscount = { code: "", amount: 0 };
+      msg.className = 'form-msg error';
+      msg.textContent = `Mã ${code} áp dụng cho đơn từ ${fmt(_min)}.`;
+    } else if(DISCOUNT_CODES[code]){
       appliedDiscount = { code, amount: DISCOUNT_CODES[code] };
       msg.className = 'form-msg success';
       msg.textContent = `Áp dụng mã ${code} thành công, giảm ${fmt(DISCOUNT_CODES[code])}!`;
@@ -3662,9 +3684,9 @@ function hdLiveInit(){
   };
 }
 (function(){
-  const go = () => hdLiveInit();
+  const go = () => { if(!window.__hdLiveCloud) hdLiveInit(); };
   try{
-    fetch('live.json?t=' + Date.now(), { cache:'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if(j && typeof j === 'object') Object.assign(LIVE, j); go(); }).catch(go);
+    fetch('live.json?t=' + Date.now(), { cache:'no-store' }).then(r => r.ok ? r.json() : null).then(j => { if(j && typeof j === 'object' && !window.__hdLiveCloud) Object.assign(LIVE, j); go(); }).catch(go);
   }catch(_){ go(); }
 })();
 renderProducts();
@@ -5421,6 +5443,88 @@ try{
     hdEl('privacyOk').onclick = () => { hdEl('privacyNote').hidden = true; localStorage.setItem('hd_note', '1'); };
   }
 }catch(_){}
+</script>
+<script src="firebase-config.js"></script>
+<script>
+/* =========================================================
+   ĐỒNG BỘ THỜI GIAN THỰC VỚI FIREBASE (Firestore)
+   Admin bấm "Lưu & đăng lên web" → trang này tự cập nhật sau 1–2 giây.
+   Chưa cấu hình / mất mạng → web vẫn chạy bình thường bằng dữ liệu có sẵn trong file.
+   ========================================================= */
+(function(){
+  const cfg = window.HD_FIREBASE;
+  if(!cfg || !cfg.projectId || !cfg.apiKey || /^DAN_|PASTE/i.test(cfg.apiKey)) return;
+  const V = '10.14.1', CK = 'hd_cloud_v1';
+  const ORIG = PRODUCTS.map(p => Object.assign({}, p));
+  const clean = v => String(v == null ? '' : v).replace(/[<>]/g, '');
+  const num = v => (typeof v === 'number' && isFinite(v)) ? v : null;
+  function build(d){
+    const o = ORIG.find(x => x.id === Number(d.id));
+    const p = o ? Object.assign({}, o) : { id:Number(d.id), name:'', category:'Khác', price:0, originalPrice:0, sold:0, rating:0, flash:false, image:'', emoji:"<i class='fa-solid fa-sparkles'></i>", tag:'NEW', bg:'#f6ebc9', desc:'' };
+    if(d.name) p.name = clean(d.name);
+    if(d.category) p.category = clean(d.category);
+    if(typeof d.desc === 'string') p.desc = clean(d.desc);
+    if(num(d.price) != null) p.price = d.price;
+    if(num(d.originalPrice) != null) p.originalPrice = d.originalPrice;
+    if(typeof d.image === 'string' && d.image.indexOf('data:image/') === 0) p.image = d.image;
+    p.hdStock = num(d.stock);
+    p.hdHidden = !!d.hidden;
+    return p;
+  }
+  function applyProducts(docs){
+    if(!docs.length) return;
+    const have = new Set(docs.map(d => Number(d.id)));
+    const out = [];
+    ORIG.forEach(o => { if(have.has(o.id)) out.push(build(docs.find(d => Number(d.id) === o.id))); });
+    docs.forEach(d => { if(!ORIG.some(o => o.id === Number(d.id))) out.push(build(d)); });
+    const vis = out.filter(p => !p.hdHidden && p.name && p.price > 0);
+    PRODUCTS.length = 0; vis.forEach(p => PRODUCTS.push(p));
+    Object.keys(cart).forEach(id => {
+      const p = PRODUCTS.find(x => x.id === Number(id));
+      if(!p){ delete cart[id]; return; }
+      if(p.hdStock != null && cart[id] > p.hdStock){ if(p.hdStock <= 0) delete cart[id]; else cart[id] = p.hdStock; }
+    });
+    categories.length = 0; categories.push('Tất cả'); new Set(PRODUCTS.map(p => p.category)).forEach(c => categories.push(c));
+    try{ hdRenderCats(); renderProducts(); renderCart(); if(typeof hdLiveInit === 'function') hdLiveInit(); }catch(e){ console.warn('[Homie] render lại lỗi', e); }
+  }
+  function applyVouchers(codes){
+    Object.keys(DISCOUNT_CODES).forEach(k => delete DISCOUNT_CODES[k]);
+    window.HD_VOUCHER_MIN = {};
+    Object.keys(codes || {}).forEach(k => {
+      const v = codes[k]; if(!v || v.active === false || !(v.amount > 0)) return;
+      DISCOUNT_CODES[String(k).toUpperCase()] = v.amount;
+      if(v.minOrder > 0) window.HD_VOUCHER_MIN[String(k).toUpperCase()] = v.minOrder;
+    });
+  }
+  // dùng bản lưu lần trước ngay lập tức để khỏi nháy giá cũ (ảnh không lưu cache)
+  try{
+    const c = JSON.parse(localStorage.getItem(CK) || 'null');
+    if(c && Array.isArray(c.products)) applyProducts(c.products);
+    if(c && c.vouchers) applyVouchers(c.vouchers);
+  }catch(_){}
+  const cache = {};
+  const save = () => { try{ localStorage.setItem(CK, JSON.stringify(cache)); }catch(_){} };
+  Promise.all([
+    import('https://www.gstatic.com/firebasejs/' + V + '/firebase-app.js'),
+    import('https://www.gstatic.com/firebasejs/' + V + '/firebase-firestore.js')
+  ]).then(([A, F]) => {
+    const db = F.getFirestore(A.initializeApp(cfg));
+    F.onSnapshot(F.collection(db, 'products'), snap => {
+      const docs = snap.docs.map(d => d.data());
+      applyProducts(docs);
+      cache.products = docs.map(d => { const x = Object.assign({}, d); delete x.image; return x; }); save();
+    }, e => console.warn('[Homie] products', e));
+    F.onSnapshot(F.doc(db, 'site', 'vouchers'), s => {
+      if(!s.exists()) return;
+      const codes = s.data().codes || {}; applyVouchers(codes); cache.vouchers = codes; save();
+    }, e => console.warn('[Homie] vouchers', e));
+    F.onSnapshot(F.doc(db, 'site', 'live'), s => {
+      if(!s.exists()) return;
+      window.__hdLiveCloud = true; Object.assign(LIVE, s.data());
+      if(typeof hdLiveInit === 'function') hdLiveInit();
+    }, e => console.warn('[Homie] live', e));
+  }).catch(e => console.warn('[Homie] không tải được Firebase, dùng dữ liệu có sẵn', e));
+})();
 </script>
 </body>
 </html>
