@@ -234,6 +234,10 @@ aside a.n[data-t=media] i{background:var(--butter)}aside a.n[data-t=music] i{bac
 #ydock .yh .btn{width:26px;height:26px;background:rgba(255,255,255,.16);border:0;color:#fff;font-size:11px}
 #ydock .yb{aspect-ratio:16/9;background:#000}#ydock .yb iframe{width:100%;height:100%;display:block;border:0}
 @media(max-width:900px){.me-top{grid-template-columns:1fr}#ydock{right:8px;bottom:8px;width:240px}#ydock.sm{width:160px}}
+
+/* ===== livestream: xem thử đa nền tảng ===== */
+#lprev .lp{position:relative;width:100%;margin-top:8px;border-radius:12px;overflow:hidden;background:#000}
+#lprev .lp iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script><script src="firebase-config.js"></script></head><body class="locked">
 
@@ -333,8 +337,12 @@ aside a.n[data-t=media] i{background:var(--butter)}aside a.n[data-t=music] i{bac
 <p><button class="btn p" id="vadd"><i class="fa-solid fa-plus"></i>Thêm / cập nhật mã</button></p></div>
 <div class="box"><table style="min-width:560px"><thead><tr><th>Mã</th><th>Giảm</th><th>Đơn tối thiểu</th><th>Đang chạy</th><th></th></tr></thead><tbody id="vtb"></tbody></table></div></section>
 
-<section class="tab" id="t-live"><div class="box"><div class="grid2"><label>Link video / livestream<input id="lu" placeholder="Dán link YouTube / Facebook"></label><label>Tiêu đề<input id="lt"></label><label>Mô tả<input id="ls"></label><label>Giờ live (đếm ngược)<input id="lst" type="datetime-local"></label></div>
+<section class="tab" id="t-live"><div class="box"><div class="grid2"><label>Link video / livestream<input id="lu" placeholder="Dán link YouTube / Facebook / TikTok"></label><label>Tiêu đề<input id="lt"></label><label>Mô tả<input id="ls"></label><label>Giờ live (đếm ngược)<input id="lst" type="datetime-local"></label></div>
 <p><label><input type="checkbox" id="lon"> Hiện khu live trên web</label> &nbsp; <label><input type="checkbox" id="llive"> Đang LIVE</label> &nbsp; <label><input type="checkbox" id="lpor"> Video quay dọc</label></p>
+<p class="hint" id="lplat"></p>
+<p><button class="btn sm" id="lprevbtn" type="button"><i class="fa-solid fa-play"></i>Xem thử video</button></p>
+<div id="lprev"></div>
+<p class="hint">Hỗ trợ link YouTube (watch, shorts, live), Facebook (videos, reel, watch) và TikTok (tiktok.com/@tên/video/số). TikTok LIVE và link rút gọn vm.tiktok.com không nhúng được. Video Facebook phải để chế độ Công khai.</p>
 <p class="hint">Chỉnh xong bấm <b>Lưu & đăng lên web</b>, khu live trên web đổi ngay.</p></div></section>
 
 <section class="tab" id="t-media">
@@ -680,8 +688,45 @@ function renderVouchers(){const ks=Object.keys(DB.vouchers);$('vtb').innerHTML=k
 $('vtb').addEventListener('click',e=>{const d=e.target.dataset;if(d.del)commit('Đã xóa mã '+d.del,()=>{delete DB.vouchers[d.del]});if(d.edit){const v=DB.vouchers[d.edit];$('vc').value=d.edit;$('va').value=v.amount;$('vm').value=v.minOrder||0;$('vc').focus()}});
 $('vtb').addEventListener('change',e=>{const k=e.target.dataset.vk;if(k)commit('Đã đổi trạng thái mã '+k,()=>{DB.vouchers[k].active=e.target.checked})});
 $('vadd').onclick=()=>{const c=$('vc').value.trim().toUpperCase().replace(/\s+/g,''),a=num($('va').value);if(!c||a<=0){alert('Nhập mã và số tiền giảm lớn hơn 0 nhé.');return}commit('Đã lưu mã '+c,()=>{DB.vouchers[c]={amount:a,minOrder:num($('vm').value),active:true}});$('vc').value=$('va').value=$('vm').value=''};
+/* ---- livestream: nhận diện YouTube / Facebook / TikTok + xem thử ---- */
+const LVN={youtube:'YouTube',facebook:'Facebook',tiktok:'TikTok'};
+function liveParse(raw,portrait){
+  let u;try{u=new URL(String(raw||'').trim())}catch(_){return{ok:false,error:'Link chưa hợp lệ.'}}
+  const h=u.hostname.replace(/^(www|m|web|mbasic)\./,''),ratio=portrait?'9 / 16':'16 / 9';
+  if(h==='youtube.com'||h==='youtu.be'||h==='youtube-nocookie.com'){
+    let id='';
+    if(h==='youtu.be')id=u.pathname.split('/')[1];
+    else if(/^\/(shorts|live|embed)\//.test(u.pathname))id=u.pathname.split('/')[2];
+    else id=u.searchParams.get('v');
+    if(!id)return{ok:false,error:'Không tìm thấy ID video YouTube trong link này.'};
+    return{ok:true,platform:'youtube',ratio,src:'https://www.youtube.com/embed/'+id+'?rel=0&playsinline=1&modestbranding=1'}}
+  if(h==='facebook.com'||h==='fb.com'||h==='fb.watch'){
+    const q=new URLSearchParams({href:u.toString(),show_text:'false',allowfullscreen:'true',width:portrait?'360':'560'});
+    return{ok:true,platform:'facebook',ratio,src:'https://www.facebook.com/plugins/video.php?'+q,
+      warn:h==='fb.watch'?'Link fb.watch đôi khi không nhúng được. Nếu video không hiện, mở link đó rồi copy link đầy đủ dạng facebook.com/.../videos/số.':''}}
+  if(h==='tiktok.com'||h==='vm.tiktok.com'||h==='vt.tiktok.com'){
+    if(h!=='tiktok.com')return{ok:false,error:'Link rút gọn TikTok không nhúng được. Mở link đó rồi copy link đầy đủ dạng tiktok.com/@tên/video/số.'};
+    const m=u.pathname.match(/\/video\/(\d+)/);
+    if(!m)return{ok:false,error:'Không thấy ID video TikTok. TikTok LIVE không nhúng được, chỉ video đã đăng mới nhúng được.'};
+    return{ok:true,platform:'tiktok',ratio:'9 / 16',src:'https://www.tiktok.com/player/v1/'+m[1]+'?music_info=1&description=0&rel=0'}}
+  return{ok:false,error:'Chưa hỗ trợ nền tảng này. Dùng link YouTube, Facebook hoặc TikTok.'}}
+function livePlat(){
+  const v=$('lu').value.trim(),el=$('lplat');$('lprev').innerHTML='';
+  if(!v){el.innerHTML='';return}
+  const r=liveParse(v,$('lpor').checked);
+  el.innerHTML=r.ok?'Nhận diện: <b>'+LVN[r.platform]+'</b>.'+(r.warn?' <span class="neg">'+esc(r.warn)+'</span>':''):'<span class="neg">'+esc(r.error)+'</span>'}
+$('lu').addEventListener('input',livePlat);
+$('lpor').addEventListener('change',livePlat);
+$('lprevbtn').onclick=()=>{
+  const b=$('lprev');b.innerHTML='';
+  const r=liveParse($('lu').value,$('lpor').checked);
+  if(!r.ok){toast(r.error);return}
+  const w=document.createElement('div');w.className='lp';w.style.aspectRatio=r.ratio;w.style.maxWidth=r.ratio==='9 / 16'?'360px':'560px';
+  const f=document.createElement('iframe');f.src=r.src;f.title='Xem thử video';f.loading='lazy';f.allowFullscreen=true;
+  f.allow='autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen';
+  f.setAttribute('scrolling','no');w.appendChild(f);b.appendChild(w)};
 /* ---- livestream ---- */
-const fillLive=()=>{$('lu').value=LV.videoUrl||'';$('lt').value=LV.title||'';$('ls').value=LV.subtitle||'';$('lst').value=LV.startTime?LV.startTime.slice(0,16):'';$('lon').checked=LV.enabled!==false;$('llive').checked=!!LV.isLive;$('lpor').checked=!!LV.portrait};
+const fillLive=()=>{$('lu').value=LV.videoUrl||'';$('lt').value=LV.title||'';$('ls').value=LV.subtitle||'';$('lst').value=LV.startTime?LV.startTime.slice(0,16):'';$('lon').checked=LV.enabled!==false;$('llive').checked=!!LV.isLive;$('lpor').checked=!!LV.portrait;livePlat()};
 ['lu','lt','ls','lst','lon','llive','lpor'].forEach(id=>$(id).addEventListener('change',()=>{LV.videoUrl=$('lu').value.trim();LV.title=$('lt').value;LV.subtitle=$('ls').value;LV.startTime=$('lst').value?$('lst').value+':00+07:00':'';LV.enabled=$('lon').checked;LV.isLive=$('llive').checked;LV.portrait=$('lpor').checked;mark()}));
 /* ---- kanban, khách hàng, nhật ký ---- */
 const KS=['Chờ xử lý','Đang giao','Thành công','Hủy'],KC={'Chờ xử lý':'#f2b84b','Đang giao':'#4f7fe0','Thành công':'#5db8a0','Hủy':'#b8324a'};
