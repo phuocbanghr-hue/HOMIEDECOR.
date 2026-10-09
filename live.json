@@ -1,10 +1,213 @@
-{
-  "enabled": true,
-  "title": "Livestream Homie Decor",
-  "subtitle": "Xem video và chốt đơn ngay tại đây!",
-  "videoUrl": "https://youtube.com/shorts/eBvOuJ5NLRE",
-  "isLive": false,
-  "portrait": true,
-  "startTime": "",
-  "pickIds": []
+/**
+ * livestream-embed.js
+ * Phát video YouTube / Facebook / TikTok từ một ô videoUrl duy nhất.
+ * Không phụ thuộc framework: dùng được với HTML thuần, React, Vue, Shopify, WordPress...
+ */
+
+/* ---------- 1. Nhận diện nền tảng + tạo link nhúng ---------- */
+
+export function parseVideoUrl(rawUrl, opts = {}) {
+  const { autoplay = false, muted = false, portrait = true } = opts;
+
+  let u;
+  try {
+    u = new URL((rawUrl || "").trim());
+  } catch {
+    return { ok: false, error: "Link không hợp lệ." };
+  }
+
+  const host = u.hostname.replace(/^(www|m|web|mbasic)\./, "");
+
+  /* ----- YouTube: watch, youtu.be, shorts, live, embed ----- */
+  if (host === "youtube.com" || host === "youtu.be" || host === "youtube-nocookie.com") {
+    let id = "";
+    if (host === "youtu.be") id = u.pathname.split("/")[1];
+    else if (/^\/(shorts|live|embed)\//.test(u.pathname)) id = u.pathname.split("/")[2];
+    else id = u.searchParams.get("v");
+
+    if (!id) return { ok: false, error: "Không tìm thấy ID video YouTube." };
+
+    const p = new URLSearchParams({
+      rel: "0",
+      playsinline: "1",
+      modestbranding: "1",
+      autoplay: autoplay ? "1" : "0",
+      mute: muted || autoplay ? "1" : "0", // trình duyệt chỉ cho autoplay khi tắt tiếng
+    });
+    const t = u.searchParams.get("t");
+    if (t) p.set("start", String(parseInt(t, 10) || 0));
+
+    return {
+      ok: true,
+      platform: "youtube",
+      src: `https://www.youtube.com/embed/${id}?${p}`,
+      ratio: portrait ? "9 / 16" : "16 / 9",
+      original: rawUrl,
+    };
+  }
+
+  /* ----- Facebook: videos, reel, watch, share/v, fb.watch ----- */
+  if (host === "facebook.com" || host === "fb.com" || host === "fb.watch") {
+    const p = new URLSearchParams({
+      href: u.toString(),
+      show_text: "false",
+      autoplay: autoplay ? "true" : "false",
+      mute: muted || autoplay ? "true" : "false",
+      allowfullscreen: "true",
+      width: portrait ? "360" : "560",
+    });
+
+    return {
+      ok: true,
+      platform: "facebook",
+      src: `https://www.facebook.com/plugins/video.php?${p}`,
+      ratio: portrait ? "9 / 16" : "16 / 9",
+      original: rawUrl,
+      warning:
+        host === "fb.watch"
+          ? "Link fb.watch đôi khi không nhúng được. Nếu video không hiện, hãy dùng link đầy đủ dạng facebook.com/.../videos/ID."
+          : undefined,
+    };
+  }
+
+  /* ----- TikTok: tiktok.com/@user/video/ID ----- */
+  if (host === "tiktok.com" || host === "vm.tiktok.com" || host === "vt.tiktok.com") {
+    if (host !== "tiktok.com") {
+      return {
+        ok: false,
+        error:
+          "Link rút gọn TikTok (vm/vt.tiktok.com) không nhúng được. Hãy mở link đó, copy link đầy đủ dạng tiktok.com/@tên/video/ID.",
+      };
+    }
+    const m = u.pathname.match(/\/video\/(\d+)/);
+    if (!m) {
+      return {
+        ok: false,
+        error: "Không tìm thấy ID video TikTok. TikTok LIVE không thể nhúng, chỉ video đã đăng mới nhúng được.",
+      };
+    }
+
+    const p = new URLSearchParams({
+      autoplay: autoplay ? "1" : "0",
+      muted: muted || autoplay ? "1" : "0",
+      music_info: "1",
+      description: "0",
+      rel: "0",
+    });
+
+    return {
+      ok: true,
+      platform: "tiktok",
+      src: `https://www.tiktok.com/player/v1/${m[1]}?${p}`,
+      ratio: "9 / 16", // TikTok luôn dọc
+      original: rawUrl,
+    };
+  }
+
+  return { ok: false, error: "Chưa hỗ trợ nền tảng này. Dùng link YouTube, Facebook hoặc TikTok." };
+}
+
+/* ---------- 2. Vẽ khối livestream vào một phần tử trên trang ---------- */
+
+const PLATFORM_LABEL = { youtube: "YouTube", facebook: "Facebook", tiktok: "TikTok" };
+
+function formatStart(startTime) {
+  if (!startTime) return "";
+  const d = new Date(startTime);
+  if (isNaN(d)) return "";
+  return d.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
+}
+
+export function renderLivestream(container, config) {
+  if (!container || !config || !config.enabled) {
+    if (container) container.innerHTML = "";
+    return;
+  }
+
+  const embed = parseVideoUrl(config.videoUrl, { portrait: config.portrait !== false });
+  const maxW = config.portrait === false ? "720px" : "360px";
+  const startLabel = !config.isLive ? formatStart(config.startTime) : "";
+
+  const el = (tag, props = {}, ...kids) => {
+    const n = Object.assign(document.createElement(tag), props);
+    kids.flat().forEach((k) => k != null && n.append(k));
+    return n;
+  };
+
+  const header = el(
+    "div",
+    { className: "ls-header" },
+    el(
+      "h2",
+      { className: "ls-title" },
+      config.isLive ? el("span", { className: "ls-badge", textContent: "ĐANG LIVE" }) : null,
+      config.title || ""
+    ),
+    config.subtitle ? el("p", { className: "ls-sub", textContent: config.subtitle }) : null,
+    startLabel ? el("p", { className: "ls-sub", textContent: `Bắt đầu lúc ${startLabel}` }) : null
+  );
+
+  let body;
+  if (embed.ok) {
+    const frame = el("iframe", {
+      src: embed.src,
+      title: config.title || "Video",
+      loading: "lazy",
+      allowFullscreen: true,
+      allow: "autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen",
+      referrerPolicy: "strict-origin-when-cross-origin",
+    });
+    frame.setAttribute("scrolling", "no");
+    frame.setAttribute("frameborder", "0");
+
+    body = el(
+      "div",
+      { className: "ls-stage", style: `aspect-ratio:${embed.ratio};max-width:${maxW}` },
+      frame
+    );
+  } else {
+    body = el("div", { className: "ls-error", role: "alert", textContent: embed.error });
+  }
+
+  const footer = el(
+    "div",
+    { className: "ls-footer" },
+    embed.ok && embed.warning ? el("p", { className: "ls-note", textContent: embed.warning }) : null,
+    config.videoUrl
+      ? el("a", {
+          className: "ls-link",
+          href: config.videoUrl,
+          target: "_blank",
+          rel: "noopener noreferrer",
+          textContent: embed.ok
+            ? `Không xem được? Mở trên ${PLATFORM_LABEL[embed.platform]}`
+            : "Mở link video gốc",
+        })
+      : null
+  );
+
+  container.replaceChildren(el("section", { className: "ls" }, header, body, footer));
+  injectStyles();
+}
+
+/* ---------- 3. CSS tối thiểu (tự chèn một lần) ---------- */
+
+function injectStyles() {
+  if (document.getElementById("ls-styles")) return;
+  const s = document.createElement("style");
+  s.id = "ls-styles";
+  s.textContent = `
+    .ls { margin: 0 auto; padding: 16px; max-width: 760px; text-align: center; }
+    .ls-title { margin: 0 0 4px; font-size: 1.35rem; line-height: 1.25; }
+    .ls-sub { margin: 0 0 12px; opacity: .75; }
+    .ls-badge { display: inline-block; margin-right: 8px; padding: 2px 8px; border-radius: 4px;
+                background: #e0245e; color: #fff; font-size: .7rem; font-weight: 700; vertical-align: middle; }
+    .ls-stage { position: relative; width: 100%; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; }
+    .ls-stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .ls-error { padding: 16px; border-radius: 8px; background: #fdecec; color: #8a1c1c; text-align: left; }
+    .ls-footer { margin-top: 10px; font-size: .85rem; }
+    .ls-note { margin: 0 0 6px; opacity: .7; }
+    .ls-link { color: inherit; text-decoration: underline; }
+  `;
+  document.head.append(s);
 }
