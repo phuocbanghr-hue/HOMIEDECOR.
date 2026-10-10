@@ -233,6 +233,10 @@ aside a.n[data-t=media] i{background:var(--butter)}aside a.n[data-t=music] i{bac
 #ydock .yh .btn{width:26px;height:26px;background:rgba(255,255,255,.16);border:0;color:#fff;font-size:11px}
 #ydock .yb{aspect-ratio:16/9;background:#000}#ydock .yb iframe{width:100%;height:100%;display:block;border:0}
 @media(max-width:900px){.me-top{grid-template-columns:1fr}#ydock{right:8px;bottom:8px;width:240px}#ydock.sm{width:160px}}
+
+/* ===== livestream: xem thử đa nền tảng ===== */
+#lprev .lp{position:relative;width:100%;margin-top:8px;border-radius:12px;overflow:hidden;background:#000}
+#lprev .lp iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script><script src="firebase-config.js"></script><style>
 /* ===== v5: thành viên, dấu thao tác, công việc, chi phí, báo cáo, thùng rác, nhiều ảnh ===== */
@@ -726,12 +730,17 @@ body.zm{overflow:hidden}
 <table style="min-width:820px"><thead><tr><th>Khách</th><th>Nhóm</th><th class="r">Đơn</th><th class="r">Tổng chi</th><th class="r">Lợi nhuận</th><th>Mua gần nhất</th><th></th></tr></thead><tbody id="ctb"></tbody></table>
 <p class="hint">Hồ sơ khách tự lập từ tên khách trong đơn hàng. <b>VIP</b> từ 3 đơn, <b>Quay lại</b> từ 2 đơn, <b>Cần chăm lại</b> là khách cũ đã hơn 45 ngày chưa mua, <b>Mới</b> là khách mua lần đầu. Đơn hủy không tính.</p></div></section>
 
-<section class="tab" id="t-vou"><div class="box"><div class="grid2"><label>Mã<input id="vc" placeholder="VD: LIVE25"></label><label>Giảm (đ)<input id="va" type="number" min="0" placeholder="25000"></label><label>Đơn tối thiểu (đ)<input id="vm" type="number" min="0" placeholder="0"></label><label>Số lượng mã (để trống = không giới hạn)<input id="vq" type="number" min="0" step="1" placeholder="VD: 50"></label><label>Hạn dùng (để trống = không hết hạn)<input id="vx" type="date"></label></div>
+<section class="tab" id="t-vou"><div class="box" id="siteBox"><h3 style="margin:0 0 10px">Phí vận chuyển &amp; thanh toán trên web</h3><div class="grid2"><label>Tỉnh/thành miễn phí ship<input id="shHome" placeholder="Đà Nẵng"></label><label>Phí ship tại tỉnh đó (đ)<input id="shHF" type="number" min="0" step="1000"></label><label>Phí ship các nơi khác (đ)<input id="shOF" type="number" min="0" step="1000"></label><label>Đơn từ (đ) miễn ship toàn quốc (0 = tắt)<input id="shFF" type="number" min="0" step="10000"></label></div><p><button class="btn p" id="shSave" type="button"><i class="fa-solid fa-floppy-disk"></i>Lưu phí ship</button> <span class="hint">Lên web sau khi bấm <b>Lưu &amp; đăng lên web</b>.</span></p></div>
+<div class="box"><div class="grid2"><label>Mã<input id="vc" placeholder="VD: LIVE25"></label><label>Giảm (đ)<input id="va" type="number" min="0" placeholder="25000"></label><label>Đơn tối thiểu (đ)<input id="vm" type="number" min="0" placeholder="0"></label><label>Số lượng mã (để trống = không giới hạn)<input id="vq" type="number" min="0" step="1" placeholder="VD: 50"></label><label>Hạn dùng (để trống = không hết hạn)<input id="vx" type="date"></label></div>
 <p><button class="btn p" id="vadd"><i class="fa-solid fa-plus"></i>Thêm / cập nhật mã</button></p></div>
 <div class="box"><table style="min-width:560px"><thead><tr><th>Mã</th><th>Giảm</th><th>Đơn tối thiểu</th><th>Số lượng</th><th>Đã dùng</th><th>Còn lại</th><th>Đang chạy</th><th></th></tr></thead><tbody id="vtb"></tbody></table></div></section>
 
-<section class="tab" id="t-live"><div class="box"><div class="grid2"><label>Link video / livestream<input id="lu" placeholder="Dán link YouTube / Facebook"></label><label>Tiêu đề<input id="lt"></label><label>Mô tả<input id="ls"></label><label>Giờ live (đếm ngược)<input id="lst" type="datetime-local"></label></div>
+<section class="tab" id="t-live"><div class="box"><div class="grid2"><label>Link video / livestream<input id="lu" placeholder="Dán link YouTube / Facebook / TikTok"></label><label>Tiêu đề<input id="lt"></label><label>Mô tả<input id="ls"></label><label>Giờ live (đếm ngược)<input id="lst" type="datetime-local"></label></div>
 <p><label><input type="checkbox" id="lon"> Hiện khu live trên web</label> &nbsp; <label><input type="checkbox" id="llive"> Đang LIVE</label> &nbsp; <label><input type="checkbox" id="lpor"> Video quay dọc</label></p>
+<p class="hint" id="lplat"></p>
+<p><button class="btn sm" id="lprevbtn" type="button"><i class="fa-solid fa-play"></i>Xem thử video</button></p>
+<div id="lprev"></div>
+<p class="hint">Hỗ trợ link YouTube (watch, shorts, live), Facebook (videos, reel, watch) và TikTok (tiktok.com/@tên/video/số). TikTok LIVE và link rút gọn vm.tiktok.com không nhúng được. Video Facebook phải để chế độ Công khai.</p>
 <p class="hint">Chỉnh xong bấm <b>Lưu & đăng lên web</b>, khu live trên web đổi ngay.</p></div></section>
 
 <section class="tab" id="t-media">
@@ -793,6 +802,7 @@ $('out').onclick=()=>{window.HDFB?HDFB.logout():location.reload()};
     window.HDFB={
       login:(m,pw)=>Au.signInWithEmailAndPassword(auth,m,pw),
       logout:()=>Au.signOut(auth).then(()=>location.reload()),
+      listenOrders:(cb,er)=>F.onSnapshot(F.collection(db,'orders'),s=>cb(s.docs.map(d=>d.data())),er),
       msg:er=>{const c=er&&er.code||'';return /invalid-credential|wrong-password|user-not-found|invalid-email/.test(c)?'Sai email hoặc mật khẩu.':/too-many/.test(c)?'Thử sai nhiều lần, đợi một lúc rồi thử lại.':/network/.test(c)?'Mất kết nối mạng.':/unauthorized-domain/.test(c)?'Tên miền này chưa được thêm vào Firebase (Authentication → Settings → Authorized domains).':'Không đăng nhập được: '+(c||er.message)},
       async load(){const m=await F.getDoc(F.doc(db,'admin','meta'));if(!m.exists())return null;const meta=m.data();
         const parts=await Promise.all(Array.from({length:meta.n},(_,i)=>F.getDoc(F.doc(db,'admin','d'+i))));
@@ -806,6 +816,7 @@ $('out').onclick=()=>{window.HDFB?HDFB.logout():location.reload()};
         old.forEach(d=>{if(!keep.has(d.id))b.delete(d.ref)});
         b.set(F.doc(db,'site','vouchers'),{codes:o.vouchers,updated:o.ts});
         b.set(F.doc(db,'site','live'),Object.assign({},o.live,{updated:o.ts}));
+        if(o.site)b.set(F.doc(db,'site','config'),Object.assign({},o.site,{updated:o.ts}));
         await b.commit();
         const txt=JSON.stringify(o.priv),n=Math.max(1,Math.ceil(txt.length/CH)),b2=F.writeBatch(db);
         for(let i=0;i<n;i++)b2.set(F.doc(db,'admin','d'+i),{s:txt.slice(i*CH,(i+1)*CH)});
@@ -879,7 +890,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeForm();if(e.key
 const FO=[{k:'id',l:'Mã đơn'},{k:'date',l:'Ngày',t:'date'},{k:'ch',l:'Kênh',t:'select',o:['Website','Facebook','Shopee','Tiktok','Khác']},{k:'status',l:'Trạng thái',t:'select',o:['Thành công','Đang giao','Chờ xử lý','Hủy']},
  {k:'item',l:'Mẫu hàng trong kho (chọn để tự trừ tồn)',t:'sel2',o:()=>itemOpts(),w:1,on:(val,g)=>{const i=itemById(val);if(!i)return;g('name').value=i.name;g('var').value=i.var;g('cost').value=i.cost;const p=DB.products.find(x=>x.id==i.pid);if(p&&!num(g('price').value))g('price').value=p.price}},
  {k:'name',l:'Sản phẩm',w:1},{k:'var',l:'Loại / mẫu'},{k:'qty',l:'Số lượng',t:'number'},{k:'price',l:'Giá bán (đ)',t:'number'},{k:'disc',l:'Giảm giá (đ)',t:'number'},{k:'fee',l:'Phí sàn (đ)',t:'number'},{k:'cost',l:'Giá vốn / sp (đ)',t:'number'},{k:'paid',l:'Thanh toán',t:'select',o:['Đã nhận','Chưa nhận']},{k:'cust',l:'Khách'},{k:'city',l:'Tỉnh / thành'},{k:'by',l:'Người chốt đơn'},{k:'note',l:'Ghi chú',w:1}];
-const FP=[{k:'name',l:'Tên sản phẩm',w:1},{k:'category',l:'Danh mục'},{k:'cost',l:'Giá nhập (đ)',t:'number'},{k:'price',l:'Giá bán (đ)',t:'number'},{k:'originalPrice',l:'Giá gạch (đ)',t:'number'},{k:'stock',l:'Kho web khi nhập tay (trống = không giới hạn)',t:'number'},{k:'desc',l:'Mô tả',t:'area',w:1},{k:'thumb',l:'Ảnh sản phẩm',t:'img',w:1},{k:'hidden',l:'Ẩn khỏi web',t:'chk',w:1}];
+const FP=[{k:'name',l:'Tên sản phẩm',w:1},{k:'category',l:'Danh mục'},{k:'cost',l:'Giá nhập (đ)',t:'number'},{k:'price',l:'Giá bán (đ)',t:'number'},{k:'originalPrice',l:'Giá gạch (đ)',t:'number'},{k:'stock',l:'Kho web khi nhập tay (trống = không giới hạn)',t:'number'},{k:'tag',l:'Nhãn trên thẻ (VD: NEW, HOT; trống = không nhãn)'},{k:'sold',l:'Đã bán (hiện trên web, 0 = ghi Sản phẩm mới)',t:'number'},{k:'rating',l:'Điểm đánh giá 0–5 (chỉ hiện khi Đã bán > 0)',t:'number'},{k:'desc',l:'Mô tả',t:'area',w:1},{k:'thumb',l:'Ảnh sản phẩm',t:'img',w:1},{k:'hidden',l:'Ẩn khỏi web',t:'chk',w:1}];
 /* ---- tổng quan ---- */
 function renderHome0(){const O=DB.orders,ok=okO().filter(o=>inRange(o,HR)),rev=sum(ok,o=>o.rev),pf=sum(ok,o=>o.profit),imp=sum(DB.imports,i=>i.total);
   let vc=0,vr=0,units=0;DB.items.forEach(i=>{const o=Math.max(0,SM[i.id].on),p=DB.products.find(x=>x.id==i.pid);units+=o;vc+=o*(i.cost||0);vr+=o*(p?p.price:0)});
@@ -1079,8 +1090,45 @@ function renderVouchers(){const ks=Object.keys(DB.vouchers);$('vtb').innerHTML=k
 $('vtb').addEventListener('click',e=>{const d=e.target.dataset;if(d.del)commit('Đã xóa mã '+d.del,()=>{delete DB.vouchers[d.del]});if(d.edit){const v=DB.vouchers[d.edit];$('vc').value=d.edit;$('va').value=v.amount;$('vm').value=v.minOrder||0;$('vq').value=v.qty||'';$('vx').value=v.exp||'';$('vc').focus()}});
 $('vtb').addEventListener('change',e=>{const k=e.target.dataset.vk;if(k)commit('Đã đổi trạng thái mã '+k,()=>{DB.vouchers[k].active=e.target.checked})});
 $('vadd').onclick=()=>{const c=$('vc').value.trim().toUpperCase().replace(/\s+/g,''),a=num($('va').value);if(!c||a<=0){alert('Nhập mã và số tiền giảm lớn hơn 0 nhé.');return}commit('Đã lưu mã '+c,()=>{const old=DB.vouchers[c];DB.vouchers[c]={amount:a,minOrder:num($('vm').value),qty:Math.max(0,Math.floor(num($('vq').value))),exp:$('vx').value||'',active:old?old.active!==false:true}});$('vc').value=$('va').value=$('vm').value=$('vq').value=$('vx').value=''};
+/* ---- livestream: nhận diện YouTube / Facebook / TikTok + xem thử ---- */
+const LVN={youtube:'YouTube',facebook:'Facebook',tiktok:'TikTok'};
+function liveParse(raw,portrait){
+  let u;try{u=new URL(String(raw||'').trim())}catch(_){return{ok:false,error:'Link chưa hợp lệ.'}}
+  const h=u.hostname.replace(/^(www|m|web|mbasic)\./,''),ratio=portrait?'9 / 16':'16 / 9';
+  if(h==='youtube.com'||h==='youtu.be'||h==='youtube-nocookie.com'){
+    let id='';
+    if(h==='youtu.be')id=u.pathname.split('/')[1];
+    else if(/^\/(shorts|live|embed)\//.test(u.pathname))id=u.pathname.split('/')[2];
+    else id=u.searchParams.get('v');
+    if(!id)return{ok:false,error:'Không tìm thấy ID video YouTube trong link này.'};
+    return{ok:true,platform:'youtube',ratio,src:'https://www.youtube.com/embed/'+id+'?rel=0&playsinline=1&modestbranding=1'}}
+  if(h==='facebook.com'||h==='fb.com'||h==='fb.watch'){
+    const q=new URLSearchParams({href:u.toString(),show_text:'false',allowfullscreen:'true',width:portrait?'360':'560'});
+    return{ok:true,platform:'facebook',ratio,src:'https://www.facebook.com/plugins/video.php?'+q,
+      warn:h==='fb.watch'?'Link fb.watch đôi khi không nhúng được. Nếu video không hiện, mở link đó rồi copy link đầy đủ dạng facebook.com/.../videos/số.':''}}
+  if(h==='tiktok.com'||h==='vm.tiktok.com'||h==='vt.tiktok.com'){
+    if(h!=='tiktok.com')return{ok:false,error:'Link rút gọn TikTok không nhúng được. Mở link đó rồi copy link đầy đủ dạng tiktok.com/@tên/video/số.'};
+    const m=u.pathname.match(/\/video\/(\d+)/);
+    if(!m)return{ok:false,error:'Không thấy ID video TikTok. TikTok LIVE không nhúng được, chỉ video đã đăng mới nhúng được.'};
+    return{ok:true,platform:'tiktok',ratio:'9 / 16',src:'https://www.tiktok.com/player/v1/'+m[1]+'?music_info=1&description=0&rel=0'}}
+  return{ok:false,error:'Chưa hỗ trợ nền tảng này. Dùng link YouTube, Facebook hoặc TikTok.'}}
+function livePlat(){
+  const v=$('lu').value.trim(),el=$('lplat');$('lprev').innerHTML='';
+  if(!v){el.innerHTML='';return}
+  const r=liveParse(v,$('lpor').checked);
+  el.innerHTML=r.ok?'Nhận diện: <b>'+LVN[r.platform]+'</b>.'+(r.warn?' <span class="neg">'+esc(r.warn)+'</span>':''):'<span class="neg">'+esc(r.error)+'</span>'}
+$('lu').addEventListener('input',livePlat);
+$('lpor').addEventListener('change',livePlat);
+$('lprevbtn').onclick=()=>{
+  const b=$('lprev');b.innerHTML='';
+  const r=liveParse($('lu').value,$('lpor').checked);
+  if(!r.ok){toast(r.error);return}
+  const w=document.createElement('div');w.className='lp';w.style.aspectRatio=r.ratio;w.style.maxWidth=r.ratio==='9 / 16'?'360px':'560px';
+  const f=document.createElement('iframe');f.src=r.src;f.title='Xem thử video';f.loading='lazy';f.allowFullscreen=true;
+  f.allow='autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share; fullscreen';
+  f.setAttribute('scrolling','no');w.appendChild(f);b.appendChild(w)};
 /* ---- livestream ---- */
-const fillLive=()=>{$('lu').value=LV.videoUrl||'';$('lt').value=LV.title||'';$('ls').value=LV.subtitle||'';$('lst').value=LV.startTime?LV.startTime.slice(0,16):'';$('lon').checked=LV.enabled!==false;$('llive').checked=!!LV.isLive;$('lpor').checked=!!LV.portrait};
+const fillLive=()=>{$('lu').value=LV.videoUrl||'';$('lt').value=LV.title||'';$('ls').value=LV.subtitle||'';$('lst').value=LV.startTime?LV.startTime.slice(0,16):'';$('lon').checked=LV.enabled!==false;$('llive').checked=!!LV.isLive;$('lpor').checked=!!LV.portrait;livePlat()};
 ['lu','lt','ls','lst','lon','llive','lpor'].forEach(id=>$(id).addEventListener('change',()=>{LV.videoUrl=$('lu').value.trim();LV.title=$('lt').value;LV.subtitle=$('ls').value;LV.startTime=$('lst').value?$('lst').value+':00+07:00':'';LV.enabled=$('lon').checked;LV.isLive=$('llive').checked;LV.portrait=$('lpor').checked;mark()}));
 /* ---- kanban, khách hàng, nhật ký ---- */
 const KS=['Chờ xử lý','Đang giao','Thành công','Hủy'],KC={'Chờ xử lý':'#f2b84b','Đang giao':'#4f7fe0','Thành công':'#5db8a0','Hủy':'#b8324a'};
@@ -1187,9 +1235,10 @@ $('saveTop').onclick=async()=>{if(!window.HDFB){toast('Chưa kết nối Firebas
   const bt=$('saveTop'),h=bt.innerHTML;bt.disabled=true;bt.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>Đang đăng...';
   try{SM=stockMap();
     const products=DB.products.map(p=>{const o={id:p.id,name:p.name||'',category:p.category||'',desc:p.desc||'',price:p.price||0,originalPrice:p.originalPrice||0,hidden:!!p.hidden},st=webStock(p);o.stock=st==null?null:st;
-      const b=BASE.find(x=>x.id==p.id);if(p.thumb&&(!b||p.thumb!==b.thumb))o.image=p.thumb;if(Array.isArray(p.imgs)&&p.imgs.length)o.images=p.imgs.slice(0,4);return o});
+      const b=BASE.find(x=>x.id==p.id);if(p.thumb&&(!b||p.thumb!==b.thumb))o.image=p.thumb;if(Array.isArray(p.imgs)&&p.imgs.length)o.images=p.imgs.slice(0,4);if(typeof p.tag==='string')o.tag=p.tag.trim();if(p.sold!=null&&p.sold!=='')o.sold=Math.max(0,+p.sold||0);if(p.rating!=null&&p.rating!=='')o.rating=Math.min(5,Math.max(0,+p.rating||0));return o});
+    const vouchersOut={};Object.keys(DB.vouchers).forEach(k=>{const v=DB.vouchers[k],l=vLeft(k);vouchersOut[k]=Object.assign({},v,{left:l===Infinity?null:l})});
     const priv=JSON.parse(JSON.stringify(Object.assign({},DB,{live:LV})));priv.products.forEach(p=>{delete p.thumb;delete p.imgs});
-    const ts=new Date().toISOString(),r=await HDFB.publish({products,vouchers:DB.vouchers,live:LV,priv,ts,baseTs:CLOUD_TS});
+    const ts=new Date().toISOString(),r=await HDFB.publish({products,vouchers:vouchersOut,live:LV,site:DB.site||null,priv,ts,baseTs:CLOUD_TS});
     if(r){CLOUD_TS=r;safe(()=>{localStorage.removeItem(DK);localStorage.removeItem('hdClean')});setDirty(false);toast('Đã đăng lên web. Khách thấy sau 1–2 giây.')}
   }catch(er){console.error(er);alert('Đăng thất bại: '+(er.code||er.message)+(er.code==='permission-denied'?'\nKiểm tra luật bảo mật Firestore và email admin.':''))}
   bt.disabled=false;bt.innerHTML=h};
@@ -3327,4 +3376,195 @@ if(h&&document.documentElement.requestFullscreen){var f=document.createElement('
 enhance();
 })();
 </script>
-</body></html>
+<script>
+/* ===== Phí ship trên web: lưu vào DB.site, đăng lên Firestore (site/config) ===== */
+(function(){
+const SH0={homeProvince:'Đà Nẵng',homeFee:0,otherFee:20000,freeFrom:500000};
+const g=id=>document.getElementById(id);
+function fill(){const s=Object.assign({},SH0,DB.site||{});
+  [['shHome',s.homeProvince],['shHF',s.homeFee],['shOF',s.otherFee],['shFF',s.freeFrom]].forEach(([id,v])=>{const e=g(id);if(e&&document.activeElement!==e)e.value=v})}
+const _rv=renderVouchers;renderVouchers=function(){const r=_rv.apply(this,arguments);try{fill()}catch(_){}return r};
+g('shSave').onclick=()=>{const n=id=>Math.max(0,Math.round(+g(id).value||0)),h=g('shHome').value.trim();
+  if(!h){alert('Nhập tên tỉnh/thành được miễn phí ship nhé.');return}
+  commit('Đã lưu phí ship',()=>{DB.site={homeProvince:h,homeFee:n('shHF'),otherFee:n('shOF'),freeFrom:n('shFF')}})};
+try{fill()}catch(_){}
+})();
+</script>
+<script>
+/* ===== Admin+ : kiểm tra sức khỏe sản phẩm, công cụ hàng loạt, Ctrl+S, cảnh báo chưa đăng ===== */
+(function(){
+const $=id=>document.getElementById(id), gal=$('pgal');
+if(!gal) return;
+const st=document.createElement('style');
+st.textContent='#hx9 h3{margin:0 0 4px}#hx9 .hxs{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}'+
+'#hx9 .hxc{padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:700;background:#eef0f4;color:#444}'+
+'#hx9 .hxc.bad{background:#fde1e1;color:#b3261e}#hx9 .hxc.warn{background:#fff1c9;color:#8a5a00}#hx9 .hxc.ok{background:#d9f1e8;color:#1c7a5d}'+
+'#hx9 .hxl{display:grid;gap:6px;margin:6px 0 12px}#hx9 .hxr{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:10px;background:rgba(127,127,127,.08);font-size:13px}'+
+'#hx9 .hxr b{flex:0 0 auto}#hx9 .hxr span{flex:1;min-width:0}#hx9 .hxt{display:flex;flex-wrap:wrap;gap:8px}';
+document.head.appendChild(st);
+gal.insertAdjacentHTML('beforebegin','<div class="box" id="hx9"></div>');
+const today=()=>new Date().toISOString().slice(0,10);
+function checks(){
+  const L=[];
+  DB.products.forEach(p=>{
+    if(p.hidden) return;
+    const s=webStock(p),c=pcost(p);
+    if(!(p.price>0)) L.push({p,lv:'bad',t:'Chưa có giá bán'});
+    else if(c>0&&p.price<c) L.push({p,lv:'bad',t:'Bán dưới giá nhập, lỗ '+fmt(c-p.price)+'/sp'});
+    if(p.originalPrice&&p.originalPrice<=p.price) L.push({p,lv:'warn',t:'Giá gạch không cao hơn giá bán nên web không hiện giảm giá'});
+    if(!p.thumb) L.push({p,lv:'warn',t:'Chưa có ảnh sản phẩm'});
+    if(s===0) L.push({p,lv:'bad',t:'Hết hàng, web đang khóa nút mua'});
+    else if(s!=null&&s<=5) L.push({p,lv:'warn',t:'Sắp hết hàng (còn '+s+')'});
+  });
+  Object.keys(DB.vouchers||{}).forEach(k=>{
+    const v=DB.vouchers[k]; if(v.active===false) return;
+    if(v.exp&&v.exp<today()) L.push({lv:'warn',t:'Mã '+k+' đã hết hạn nhưng vẫn đang bật'});
+    else if(+v.qty>0&&vLeft(k)<=0) L.push({lv:'warn',t:'Mã '+k+' đã hết lượt nhưng vẫn đang bật'});
+  });
+  return L;
+}
+function render(){
+  const box=$('hx9'); if(!box||!DB.products.length) return;
+  const L=checks(),bad=L.filter(x=>x.lv==='bad').length,warn=L.length-bad,dirty=$('dirty')&&$('dirty').classList.contains('on');
+  const shown=DB.products.filter(p=>!p.hidden).length;
+  box.innerHTML='<h3>Kiểm tra &amp; công cụ nhanh</h3><div class="hxs">'+
+    '<span class="hxc '+(bad?'bad':'ok')+'">'+(bad?bad+' lỗi cần sửa':'Không có lỗi')+'</span>'+
+    (warn?'<span class="hxc warn">'+warn+' lưu ý</span>':'')+
+    '<span class="hxc">'+shown+'/'+DB.products.length+' đang hiện trên web</span>'+
+    (dirty?'<span class="hxc warn">Có thay đổi chưa đăng lên web</span>':'<span class="hxc ok">Web đang khớp admin</span>')+'</div>'+
+    (L.length?'<div class="hxl">'+L.slice(0,8).map((x,i)=>'<div class="hxr"><b>'+(x.p?esc(x.p.name):'Mã giảm giá')+'</b><span>'+esc(x.t)+'</span>'+(x.p?'<button class="btn sm" type="button" data-hx="'+x.p.id+'">Sửa</button>':'')+'</div>').join('')+(L.length>8?'<div class="hint">…và '+(L.length-8)+' mục nữa</div>':'')+'</div>':'')+
+    '<div class="hxt"><button class="btn sm" type="button" data-hxa="sale"><i class="fa-solid fa-percent"></i>Giảm giá hàng loạt</button>'+
+    '<button class="btn sm" type="button" data-hxa="unsale"><i class="fa-solid fa-rotate-left"></i>Bỏ giảm giá</button>'+
+    '<button class="btn sm" type="button" data-hxa="sold"><i class="fa-solid fa-chart-simple"></i>Tính "Đã bán" từ đơn hàng</button>'+
+    '<button class="btn sm" type="button" data-hxa="round"><i class="fa-solid fa-coins"></i>Làm tròn giá về nghìn</button></div>'+
+    '<p class="hint" style="margin:8px 0 0">Mọi thao tác hàng loạt đều có nút Hoàn tác. Phím tắt <b>Ctrl + S</b> = Lưu &amp; đăng lên web.</p>';
+}
+$('hx9').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.hx){const p=DB.products.find(x=>x.id==b.dataset.hx);if(p)editProd(p);return}
+  const a=b.dataset.hxa, V=DB.products.filter(p=>!p.hidden);
+  if(a==='sale'){
+    const v=prompt('Giảm giá bao nhiêu % cho '+V.length+' sản phẩm đang hiện? (1–90)\nGiá hiện tại sẽ thành giá gạch, giá bán mới được làm tròn nghìn.','10');
+    if(v===null) return; const pc=+v;
+    if(!(pc>=1&&pc<=90)){alert('Nhập số từ 1 đến 90 nhé.');return}
+    commit('Giảm '+pc+'% cho '+V.length+' sản phẩm',()=>V.forEach(p=>{const base=p.originalPrice>p.price?p.originalPrice:p.price;p.originalPrice=base;p.price=Math.max(1000,Math.round(base*(1-pc/100)/1000)*1000)}));
+  }else if(a==='unsale'){
+    const n=V.filter(p=>p.originalPrice>p.price).length; if(!n){toast('Chưa có sản phẩm nào đang giảm giá');return}
+    if(!confirm('Đưa '+n+' sản phẩm về giá gốc (giá gạch) và bỏ giảm giá?')) return;
+    commit('Bỏ giảm giá '+n+' sản phẩm',()=>V.forEach(p=>{if(p.originalPrice>p.price){p.price=p.originalPrice;p.originalPrice=0}}));
+  }else if(a==='sold'){
+    const M={};let skip=0;
+    DB.orders.forEach(o=>{if(!o||o.status==='Hủy'||o.bad)return;const it=DB.items.find(i=>i.id===o.item);if(!it||it.pid==null){skip++;return}M[it.pid]=(M[it.pid]||0)+(o.qty||0)});
+    commit('Đã tính "Đã bán" từ đơn hàng',()=>DB.products.forEach(p=>{p.sold=M[p.id]||0}));
+    if(skip) toast('Đã tính xong, bỏ qua '+skip+' đơn chưa gắn mẫu kho');
+  }else if(a==='round'){
+    commit('Làm tròn giá về nghìn',()=>DB.products.forEach(p=>{if(p.price>0)p.price=Math.max(1000,Math.round(p.price/1000)*1000);if(p.originalPrice>0)p.originalPrice=Math.round(p.originalPrice/1000)*1000}));
+  }
+});
+const _rp=renderProducts;renderProducts=function(){const r=_rp.apply(this,arguments);try{render()}catch(_){}return r};
+const dt=$('dirty'); if(dt) new MutationObserver(()=>{try{render()}catch(_){}}).observe(dt,{attributes:true,attributeFilter:['class']});
+/* Ctrl+S = Lưu & đăng, cảnh báo khi rời trang mà chưa đăng */
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&e.key.toLowerCase()==='s'){e.preventDefault();if(document.body.classList.contains('locked'))return;const b=$('saveTop');if(b&&!b.disabled)b.click()}});
+window.addEventListener('beforeunload',e=>{if(dt&&dt.classList.contains('on')&&!document.body.classList.contains('locked')){e.preventDefault();e.returnValue=''}});
+try{render()}catch(_){}
+})();
+</script>
+<script>
+/* ===== Admin++ : xem thay đổi trước khi đăng + hiệu quả từng sản phẩm ===== */
+(function(){
+const $=id=>document.getElementById(id), anchor=$('hx9');
+if(!anchor) return;
+const st=document.createElement('style');
+st.textContent='#hxd h3,#hxp h3{margin:0 0 4px}#hxd .dl{display:grid;gap:5px;margin:8px 0}#hxd .dr{padding:6px 10px;border-radius:9px;background:rgba(127,127,127,.08);font-size:13px}'+
+'#hxd .dr i{font-style:normal;font-weight:700;margin-right:6px}#hxd .ad{color:#1c7a5d}#hxd .ch{color:#8a5a00}#hxd .rm{color:#b3261e}'+
+'#hxp table{width:100%;border-collapse:collapse;font-size:13px}#hxp th,#hxp td{padding:7px 8px;text-align:left;border-bottom:1px solid rgba(127,127,127,.18)}#hxp .r{text-align:right}'+
+'#hxp .bar{height:6px;border-radius:4px;background:rgba(127,127,127,.18);overflow:hidden;min-width:60px}#hxp .bar i{display:block;height:100%;background:#e8795a}'+
+'#hxp .tg{font-size:12px;color:#8a5a00}#hxp .tg.bad{color:#b3261e}#hxp .wrap{overflow-x:auto}';
+document.head.appendChild(st);
+anchor.insertAdjacentHTML('afterend','<div class="box" id="hxd" style="display:none"></div><div class="box" id="hxp"></div>');
+const SK='hdPubSnap9';
+let SNAP=null;try{SNAP=JSON.parse(localStorage.getItem(SK)||'null')}catch(_){}
+const dirty=()=>{const d=$('dirty');return !!(d&&d.classList.contains('on'))};
+function cur(){
+  const p={};DB.products.forEach(x=>{let s=null;try{s=webStock(x)}catch(_){}
+    p[x.id]={n:x.name||'',c:x.category||'',d:x.desc||'',pr:x.price||0,op:x.originalPrice||0,h:!!x.hidden,st:s,tg:x.tag==null?null:x.tag,so:x.sold==null?null:x.sold,ra:x.rating==null?null:x.rating,im:(x.thumb||'').length,ims:(x.imgs||[]).length}});
+  const v={};Object.keys(DB.vouchers||{}).forEach(k=>{const x=DB.vouchers[k];v[k]={a:x.amount||0,m:x.minOrder||0,q:x.qty||0,e:x.exp||'',on:x.active!==false}});
+  return{p,v,s:DB.site||null,l:JSON.parse(JSON.stringify(LV||{}))}}
+function takeSnap(){if(!DB.products.length||dirty())return;SNAP=cur();try{localStorage.setItem(SK,JSON.stringify(SNAP))}catch(_){}}
+const m=n=>fmt(n||0),yn=b=>b?'Có':'Không';
+function diff(){
+  if(!SNAP) return null;const c=cur(),L=[];
+  const F={n:['tên',x=>x],c:['danh mục',x=>x],pr:['giá bán',m],op:['giá gạch',m],h:['ẩn khỏi web',yn],st:['kho web',x=>x==null?'không giới hạn':x],tg:['nhãn',x=>x==null?'(mặc định)':(x||'không nhãn')],so:['đã bán',x=>x==null?'—':x],ra:['đánh giá',x=>x==null?'—':x]};
+  Object.keys(c.p).forEach(id=>{const a=SNAP.p[id],b=c.p[id];
+    if(!a){L.push(['ad','Thêm sản phẩm',b.n+' ('+m(b.pr)+')']);return}
+    Object.keys(F).forEach(k=>{if(a[k]!==b[k])L.push(['ch',b.n,F[k][0]+': '+F[k][1](a[k])+' → '+F[k][1](b[k])])});
+    if(a.d!==b.d)L.push(['ch',b.n,'sửa mô tả']);
+    if(a.im!==b.im||a.ims!==b.ims)L.push(['ch',b.n,'đổi ảnh'])});
+  Object.keys(SNAP.p).forEach(id=>{if(!c.p[id])L.push(['rm','Xóa sản phẩm',SNAP.p[id].n])});
+  Object.keys(c.v).forEach(k=>{const a=SNAP.v[k],b=c.v[k];
+    if(!a)L.push(['ad','Thêm mã',k+' (−'+m(b.a)+')']);
+    else if(JSON.stringify(a)!==JSON.stringify(b))L.push(['ch','Mã '+k,'giảm '+m(b.a)+', tối thiểu '+m(b.m)+', '+(b.on?'đang bật':'đang tắt')])});
+  Object.keys(SNAP.v).forEach(k=>{if(!c.v[k])L.push(['rm','Xóa mã',k])});
+  if(JSON.stringify(SNAP.s)!==JSON.stringify(c.s))L.push(['ch','Phí ship','đã thay đổi cấu hình']);
+  if(JSON.stringify(SNAP.l)!==JSON.stringify(c.l))L.push(['ch','Livestream','đã thay đổi cấu hình']);
+  return L}
+function renderDiff(){
+  const b=$('hxd');if(!b)return;
+  if(!dirty()){b.style.display='none';return}
+  b.style.display='';const L=diff();
+  b.innerHTML='<h3>Thay đổi chưa đăng lên web</h3>'+(L===null?'<p class="hint">Chưa có bản đối chiếu. Sau lần đăng kế tiếp, mục này sẽ liệt kê chính xác từng thay đổi.</p>':
+    L.length?'<div class="dl">'+L.slice(0,14).map(x=>'<div class="dr"><i class="'+x[0]+'">'+(x[0]==='ad'?'+':x[0]==='rm'?'−':'~')+'</i><b>'+esc(x[1])+'</b> · '+esc(x[2])+'</div>').join('')+(L.length>14?'<div class="hint">…và '+(L.length-14)+' thay đổi nữa</div>':'')+'</div><p class="hint" style="margin:0">Bấm <b>Lưu &amp; đăng lên web</b> (hoặc Ctrl + S) để khách thấy.</p>':
+    '<p class="hint">Không có thay đổi nào ảnh hưởng tới web (có thể bạn vừa sửa dữ liệu nội bộ như đơn hàng, kho).</p>')}
+let RG='all';
+function perf(){
+  const o2p={};DB.items.forEach(i=>{if(i.pid!=null)o2p[i.id]=i.pid});
+  const M={},U={q:0,rev:0,pf:0};
+  DB.products.forEach(p=>M[p.id]={p,q:0,rev:0,pf:0});
+  DB.orders.forEach(o=>{if(!o||o.status==='Hủy'||o.bad)return;if(RG==='30'&&!inRange(o,'30'))return;
+    const pid=o2p[o.item],t=pid!=null&&M[pid]?M[pid]:U;t.q+=o.qty||0;t.rev+=o.rev||0;t.pf+=o.profit||0});
+  return{rows:Object.values(M).sort((a,b)=>b.pf-a.pf||b.q-a.q),U}}
+function renderPerf(){
+  const b=$('hxp');if(!b||!DB.products.length)return;
+  const {rows,U}=perf(),top=Math.max(1,...rows.map(r=>r.pf));
+  const tip=r=>{let s=null;try{s=webStock(r.p)}catch(_){}
+    if(r.p.hidden)return['','Đang ẩn'];
+    if(r.q===0)return['','Chưa bán được'+(RG==='30'?' trong 30 ngày':'')];
+    if(r.rev>0&&r.pf/r.rev<.15)return['bad','Biên thấp, cân nhắc tăng giá'];
+    if(s!=null&&s<=5)return['bad','Bán được, sắp hết, nên nhập thêm'];
+    return['','Ổn']};
+  b.innerHTML='<div class="bar" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><h3 style="margin:0;margin-right:auto">Hiệu quả từng sản phẩm</h3><select id="hxr" aria-label="Khoảng thời gian"><option value="all">Từ đầu đến nay</option><option value="30">30 ngày gần đây</option></select><button class="btn sm" id="hxcsv" type="button"><i class="fa-solid fa-file-csv"></i>Tải CSV</button></div>'+
+   '<div class="wrap"><table><thead><tr><th>Sản phẩm</th><th class="r">Đã bán</th><th class="r">Doanh thu</th><th class="r">Lợi nhuận</th><th class="r">Biên</th><th>Tỷ trọng lãi</th><th>Gợi ý</th></tr></thead><tbody>'+
+   rows.map(r=>{const t=tip(r),bi=r.rev>0?Math.round(r.pf/r.rev*100)+'%':'—';return'<tr><td><b>'+esc(r.p.name)+'</b></td><td class="r">'+r.q+'</td><td class="r">'+m(r.rev)+'</td><td class="r">'+m(r.pf)+'</td><td class="r">'+bi+'</td><td><div class="bar"><i style="width:'+Math.max(0,Math.round(r.pf/top*100))+'%"></i></div></td><td class="tg '+t[0]+'">'+t[1]+'</td></tr>'}).join('')+
+   (U.q?'<tr><td><i>Đơn chưa gắn sản phẩm</i></td><td class="r">'+U.q+'</td><td class="r">'+m(U.rev)+'</td><td class="r">'+m(U.pf)+'</td><td></td><td></td><td class="tg">Gắn mẫu kho ở tab Đơn hàng để tính đúng</td></tr>':'')+
+   '</tbody></table></div>';
+  $('hxr').value=RG;$('hxr').onchange=e=>{RG=e.target.value;renderPerf()};
+  $('hxcsv').onclick=()=>{const q=s=>'"'+String(s).replace(/"/g,'""')+'"',L=[['Sản phẩm','Đã bán','Doanh thu','Lợi nhuận','Biên %'].map(q).join(',')].concat(rows.map(r=>[r.p.name,r.q,r.rev,r.pf,r.rev>0?Math.round(r.pf/r.rev*100):''].map(q).join(',')));
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+L.join('\r\n')],{type:'text/csv'}));a.download='hieu-qua-san-pham.csv';document.body.appendChild(a);a.click();a.remove()}}
+const _rp=renderProducts;renderProducts=function(){const r=_rp.apply(this,arguments);try{takeSnap();renderDiff();renderPerf()}catch(e){console.warn(e)}return r};
+const dt=$('dirty');if(dt)new MutationObserver(()=>{try{takeSnap();renderDiff()}catch(_){}}).observe(dt,{attributes:true,attributeFilter:['class']});
+setInterval(()=>{try{takeSnap()}catch(_){}},1500);
+try{takeSnap();renderDiff();renderPerf()}catch(_){}
+})();
+</script>
+<script>
+/* ===== Đơn khách báo "đã chuyển khoản" từ web → hiện ngay trong admin (Firestore orders) ===== */
+(function(){
+let ORD=[],started=false;
+function check(){
+  if(!ORD.length||WPEND||document.body.classList.contains('locked')||!DB.products.length||document.getElementById('wo').classList.contains('on'))return;
+  const seen=new Set(DB.webSeen||[]);DB.orders.forEach(o=>o.web&&seen.add(o.web));
+  const rows=ORD.filter(x=>x&&x.row&&x.row['Mã đơn']&&!seen.has(x.row['Mã đơn'])).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  if(!rows.length)return;
+  wShow(rows.map(x=>wParse(x.row)),false,'website (khách vừa báo đã chuyển khoản)');
+}
+function start(){
+  if(started||!window.HDFB||!HDFB.listenOrders)return;started=true;
+  try{HDFB.listenOrders(d=>{ORD=d;check()},er=>{toast('Không đọc được đơn từ web: '+(er.code||er.message)+(er.code==='permission-denied'?' (kiểm tra Firestore rules cho orders)':''))})}catch(e){console.warn(e)}
+  setInterval(check,3000);
+}
+const _boot=boot;boot=async function(){const r=await _boot.apply(this,arguments);try{start()}catch(_){}return r};
+})();
+</script>
+</body>
+
+</html>
