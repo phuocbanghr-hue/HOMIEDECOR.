@@ -3248,6 +3248,7 @@ async function confirmTransfer(orderData, btn){
   };
   hdOrderPlaced = true;
   hdSaveOrder(orderData);
+  if(typeof hdPushOrder === 'function') try{ hdPushOrder(payload); }catch(_){}
   if(typeof hdCelebrate === 'function') hdCelebrate();
   hdTrack('confirm_transfer', { orderId: orderData.orderId, value: orderData.total, code: orderData.discountCode || '' });
   hdFlush();
@@ -5446,6 +5447,20 @@ try{
   if(!cfg || !cfg.apiKey || /^DAN_|PASTE/i.test(cfg.apiKey)) return;
   window.HD_FB_LIVE = true;                       // có Firestore thì bỏ qua live.json cũ
 
+  /* Khách bấm "Tôi đã chuyển khoản" → đẩy đơn lên Firestore (orders/{mã đơn}) để admin nhận tức thì.
+     Vẫn gửi Google Sheet như cũ; nếu Firestore chưa sẵn sàng thì xếp hàng chờ rồi gửi sau. */
+  var ORDQ = [], pushNow = null;
+  window.hdPushOrder = function(o){
+    var row = {
+      'Loại':'Đơn hàng', 'Mã đơn':o.orderId, 'Thời gian':o.timestamp, 'Khách hàng':o.name, 'Điện thoại':o.phone,
+      'Tỉnh':o.province || '', 'Địa chỉ':o.address || '', 'Sản phẩm':o.items, 'Tổng tiền':String(o.total),
+      'Ghi chú':'Khách báo đã chuyển khoản — chờ đối soát',
+      'Cột 1':'Khách báo đã chuyển khoản · ' + o.phone, 'Cột 2':o.discountCode ? 'Mã ' + o.discountCode : ''
+    };
+    var doc = { orderId:o.orderId, createdAt:Date.now(), source:'website', status:'Khách báo đã chuyển khoản', row:row, total:+o.total || 0 };
+    if(pushNow) pushNow(doc); else ORDQ.push(doc);
+  };
+
   var FBV = '10.14.1', BASEURL = 'https://www.gstatic.com/firebasejs/' + FBV + '/';
   var DEF = {}; PRODUCTS.forEach(function(p){ DEF[p.id] = Object.assign({}, p); });
   var BGS = ['#f6ebc9','#dce8f0','#f8e1d2','#f3d9e3','#dcead9','#e9dff3'];
@@ -5458,6 +5473,7 @@ try{
     '.card.hd-soldout .add-btn{opacity:.45;cursor:not-allowed;pointer-events:none}' +
     '.hd-so{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(30,30,40,.82);color:#fff;font-weight:700;font-size:13px;padding:7px 16px;border-radius:999px;letter-spacing:.3px;pointer-events:none;z-index:3}' +
     '.hd-low{color:#d1572b;font-weight:600}' +
+    '.hd-notify{display:inline-block;margin-top:8px;font-size:12.5px;font-weight:600;color:var(--cobalt,#e8795a);text-decoration:none}.hd-notify:hover{text-decoration:underline}' +
     '.hd-so-note{display:inline-block;margin:0 0 10px;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:700;background:#fde7df;color:#c2461f}' +
     '.hd-gal{position:absolute;left:10px;right:10px;bottom:10px;display:flex;gap:6px;justify-content:center;z-index:4}' +
     '.hd-gal-i{width:44px;height:44px;padding:0;border:2px solid rgba(255,255,255,.7);border-radius:10px;overflow:hidden;background:#fff;cursor:pointer;opacity:.85}' +
@@ -5574,11 +5590,30 @@ try{
   function apply(){
     try{
       if(R.products) applyProducts();
+      var sig = PRODUCTS.map(function(p){ return [p.id, p.name, p.price, p.hdStock].join(':'); }).join('|');
+      if(fromServer && serverApplied && lastSig !== null && sig !== lastSig && typeof fxToast === 'function') fxToast('Shop vừa cập nhật giá / sản phẩm mới');
+      lastSig = sig; if(fromServer) serverApplied = true;
       if(R.vouchers) applyVouchers();
       if(R.live) applyLive();
       if(R.config) applyConfig();
       refresh();
+      if(fromServer) saveCache();
     }catch(e){ console.warn('[sync]', e); }
+  }
+  /* nhớ lần tải gần nhất (không kèm ảnh) để lần sau hiện đúng giá ngay, rồi Firestore cập nhật tiếp */
+  var CK = 'hd_remote_v1', fromServer = false, serverApplied = false, lastSig = null;
+  function saveCache(){
+    try{
+      localStorage.setItem(CK, JSON.stringify({
+        p: R.products ? R.products.map(function(d){ var c = Object.assign({}, d); delete c.image; delete c.images; return c; }) : null,
+        v: R.vouchers, c: R.config, l: R.live }));
+    }catch(_){}
+  }
+  function loadCache(){
+    try{
+      var c = JSON.parse(localStorage.getItem(CK) || 'null'); if(!c) return;
+      R.products = c.p; R.vouchers = c.v; R.config = c.c; R.live = c.l; apply();
+    }catch(_){}
   }
   function schedule(){ clearTimeout(timer); timer = setTimeout(apply, 60); }
 
@@ -5611,6 +5646,8 @@ try{
       if(p.hdStock <= 0){
         card.classList.add('hd-soldout'); btn.disabled = true; btn.setAttribute('aria-label', 'Hết hàng');
         var m = card.querySelector('.card-media'); if(m) m.insertAdjacentHTML('beforeend', '<span class="hd-so">Hết hàng</span>');
+        var cb = card.querySelector('.card-body');
+        if(cb && typeof FANPAGE_ID !== 'undefined') cb.insertAdjacentHTML('beforeend', '<a class="hd-notify" target="_blank" rel="noopener" href="https://m.me/' + FANPAGE_ID + '?text=' + encodeURIComponent('Mình muốn được báo khi ' + p.name + ' có hàng lại') + '"><i class="fa-brands fa-facebook-messenger"></i> Nhắn shop báo khi có hàng</a>');
       }else if(p.hdStock <= 5){
         var mr = card.querySelector('.meta-row'); if(mr) mr.insertAdjacentHTML('beforeend', ' <span class="hd-low">· Chỉ còn ' + p.hdStock + '</span>');
       }
@@ -5643,6 +5680,8 @@ try{
     return r;
   };
 
+  loadCache();
+
   /* ---- kết nối Firestore ---- */
   var failed = false;
   function fail(e){
@@ -5655,8 +5694,10 @@ try{
     try{
       var A = await import(BASEURL + 'firebase-app.js'), F = await import(BASEURL + 'firebase-firestore.js');
       var db = F.getFirestore(A.initializeApp(cfg, 'hd-site'));
+      pushNow = function(doc){ F.setDoc(F.doc(db, 'orders', doc.orderId), doc).catch(function(e){ console.warn('[sync] Không gửi được đơn lên admin:', e && e.code); }); };
+      ORDQ.splice(0).forEach(pushNow);
       F.onSnapshot(F.collection(db, 'products'), function(s){
-        R.products = s.docs.map(function(d){ return Object.assign({ id:d.id }, d.data()); }); schedule();
+        fromServer = true; R.products = s.docs.map(function(d){ return Object.assign({ id:d.id }, d.data()); }); schedule();
       }, fail);
       F.onSnapshot(F.doc(db, 'site', 'vouchers'), function(s){
         R.vouchers = s.exists() ? (s.data().codes || {}) : null; schedule();
@@ -5669,6 +5710,62 @@ try{
       }, fail);
     }catch(e){ fail(e); }
   })();
+})();
+</script>
+<script>
+/* ===== Trải nghiệm mua hàng: thanh "mua thêm để freeship" + nhớ thông tin giao hàng ===== */
+(function(){
+  var st = document.createElement('style');
+  st.textContent = '.hd-sb{margin:0 0 12px;padding:10px 12px;border-radius:12px;background:rgba(232,121,90,.12);font-size:13px;line-height:1.5}' +
+    '.hd-sb .t{height:6px;border-radius:4px;background:rgba(127,127,127,.22);margin-top:7px;overflow:hidden}' +
+    '.hd-sb .t i{display:block;height:100%;background:var(--cobalt,#e8795a);transition:width .35s}' +
+    '.hd-forget{display:block;margin:10px 0 0;font-size:12px;color:var(--navy-soft,#777);text-align:center}';
+  document.head.appendChild(st);
+
+  function shipBar(){
+    var foot = document.getElementById('cartFoot'); if(!foot) return;
+    var bar = document.getElementById('hdShipBar');
+    if(!SHIPPING.freeFrom || !Object.keys(cart).length){ if(bar) bar.remove(); return; }
+    if(!bar){ bar = document.createElement('div'); bar.id = 'hdShipBar'; bar.className = 'hd-sb'; foot.insertBefore(bar, foot.firstChild); }
+    var total = cartTotal(), left = SHIPPING.freeFrom - total, pct = Math.min(100, Math.round(total / SHIPPING.freeFrom * 100));
+    bar.innerHTML = (left <= 0
+      ? '<i class="fa-solid fa-truck-fast"></i> Đơn của bạn được <b>miễn phí ship toàn quốc</b>'
+      : '<i class="fa-solid fa-truck-fast"></i> Mua thêm <b>' + fmt(left) + '</b> để miễn phí ship toàn quốc <span style="opacity:.75">(' + SHIPPING.homeProvince + ' luôn được miễn phí)</span>')
+      + '<div class="t"><i style="width:' + pct + '%"></i></div>';
+  }
+  var _rc = renderCart;
+  renderCart = function(){ var r = _rc.apply(this, arguments); try{ shipBar(); }catch(_){} return r; };
+  try{ shipBar(); }catch(_){}
+
+  var KEY = 'hd_cust_v1', F = { ofName:'name', ofPhone:'phone', ofStreet:'street' };
+  function load(){ try{ return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; }catch(_){ return {}; } }
+  document.addEventListener('input', function(e){
+    var id = e.target && e.target.id; if(!F[id]) return;
+    var o = load(); o[F[id]] = e.target.value;
+    try{ localStorage.setItem(KEY, JSON.stringify(o)); }catch(_){}
+  });
+  var _rf = renderCheckoutForm;
+  renderCheckoutForm = function(){
+    var r = _rf.apply(this, arguments);
+    try{
+      var o = load(), any = false;
+      Object.keys(F).forEach(function(id){
+        var el = document.getElementById(id); if(!el) return;
+        if(o[F[id]]) any = true;
+        if(!el.value && o[F[id]]){ el.value = o[F[id]]; el.dispatchEvent(new Event('input', { bubbles:true })); }
+      });
+      var form = document.getElementById('ofName') && document.getElementById('ofName').closest('form');
+      if(form && any && !form.querySelector('.hd-forget')){
+        form.insertAdjacentHTML('beforeend', '<a href="#" class="hd-forget">Xóa thông tin đã lưu trên máy này</a>');
+        form.querySelector('.hd-forget').onclick = function(ev){
+          ev.preventDefault(); try{ localStorage.removeItem(KEY); }catch(_){}
+          Object.keys(F).forEach(function(id){ var el = document.getElementById(id); if(el) el.value = ''; });
+          this.remove();
+        };
+      }
+    }catch(_){}
+    return r;
+  };
 })();
 </script>
 </body>
