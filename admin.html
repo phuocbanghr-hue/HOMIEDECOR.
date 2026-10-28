@@ -1023,7 +1023,7 @@ function dl(name,obj){const a=document.createElement('a');a.href=URL.createObjec
 $('saveTop').onclick=async()=>{if(!window.HDFB){toast('Chưa kết nối Firebase');return}
   const bt=$('saveTop'),h=bt.innerHTML;bt.disabled=true;bt.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>Đang đăng...';
   try{SM=stockMap();
-    const products=DB.products.map(p=>{const o={id:p.id,name:p.name||'',category:p.category||'',desc:p.desc||'',price:p.price||0,originalPrice:p.originalPrice||0,hidden:!!p.hidden},st=webStock(p);o.stock=st==null?null:st;if(p.variants!==undefined)o.variants=String(p.variants).split(/[\n,;]+/).map(s=>s.trim()).filter(Boolean);
+    const products=DB.products.map(p=>{const o={id:p.id,name:p.name||'',category:p.category||'',desc:p.desc||'',price:p.price||0,originalPrice:p.originalPrice||0,hidden:!!p.hidden},st=webStock(p);o.stock=st==null?null:st;if(p.variants!==undefined)o.variants=String(p.variants).split(/[\n,;]+/).map(s=>s.trim()).filter(Boolean);if(o.variants&&o.variants.length&&p.auto){const L=linked(p);o.soldOutVariants=o.variants.filter(v=>{const nv=nrm(v),m=L.filter(i=>i.var&&(nrm(i.var)===nv||nrm(i.var).includes(nv)||nv.includes(nrm(i.var))));return m.length>0&&sum(m,i=>(SM[i.id]||{av:0}).av)<=0})}
       const b=BASE.find(x=>x.id==p.id);if(p.thumb&&(!b||p.thumb!==b.thumb))o.image=p.thumb;if(Array.isArray(p.imgs)&&p.imgs.length)o.images=p.imgs.slice(0,4);return o});
     const priv=JSON.parse(JSON.stringify(Object.assign({},DB,{live:LV})));priv.products.forEach(p=>{delete p.thumb;delete p.imgs});
     const ts=new Date().toISOString(),r=await HDFB.publish({products,vouchers:DB.vouchers,live:LV,priv,ts,baseTs:CLOUD_TS});
