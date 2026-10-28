@@ -1874,6 +1874,18 @@
   .photo-card:hover img{ transform:scale(1.05); }
   html{ scroll-padding-top:90px; }
 </style>
+
+<style id="hd-polish2">
+  .price-chips{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:-6px 0 22px; }
+  .price-chips .var-chip{ padding:7px 15px; font-size:13px; }
+  .result-count{ margin-left:auto; font-size:13px; color:var(--navy-soft); font-weight:600; }
+  .qv-var{ margin-bottom:16px; }
+  .qv-var-label{ font-size:13px; font-weight:700; margin-bottom:8px; }
+  .qv-var-err{ min-height:16px; margin-top:6px; font-size:12.5px; font-weight:600; color:#c0392b; }
+  #lightboxBody .hdv-buy{ min-width:110px; }
+  /* các khối cuối trang chỉ vẽ khi cuộn tới → trang mở nhanh hơn */
+  #about, #faq, #contact, footer{ content-visibility:auto; contain-intrinsic-size:auto 560px; }
+</style>
 </head>
 <body>
 
@@ -2119,6 +2131,13 @@ el.addEventListener('animationend',function(e){if(e.animationName==='introOut')r
           <option value="new">Mới nhất</option>
         </select>
       </div>
+    </div>
+    <div class="price-chips" id="priceChips" role="group" aria-label="Lọc theo giá">
+      <button type="button" class="var-chip on" data-min="0" data-max="0">Tất cả giá</button>
+      <button type="button" class="var-chip" data-min="0" data-max="30000">Dưới 30K</button>
+      <button type="button" class="var-chip" data-min="30000" data-max="50000">30K – 50K</button>
+      <button type="button" class="var-chip" data-min="50000" data-max="0">Trên 50K</button>
+      <span class="result-count" id="resultCount" aria-live="polite"></span>
     </div>
     <div class="grid" id="productGrid"></div>
   </div>
@@ -2715,9 +2734,18 @@ function syncWishOnlyBtn(){
   btn.style.borderColor = wishOnly ? 'var(--cobalt)' : '';
 }
 document.getElementById('wishOnlyBtn').onclick = () => { wishOnly = !wishOnly; syncWishOnlyBtn(); renderProducts(); };
+document.getElementById('priceChips').onclick = (e) => {
+  const b = e.target.closest('.var-chip'); if(!b) return;
+  const mn = Number(b.dataset.min), mx = Number(b.dataset.max);
+  priceFilter = (mn || mx) ? [mn, mx] : null;
+  document.querySelectorAll('#priceChips .var-chip').forEach(x => x.classList.toggle('on', x === b));
+  hdTrack('price_filter', { label: b.textContent.trim() });
+  renderProducts();
+};
 
 let searchTerm = '';
 let wishOnly = false;
+let priceFilter = null;   // [min, max) — max = 0 là không giới hạn
 const wishlist = new Set(JSON.parse(localStorage.getItem('hd_wishlist') || '[]'));
 
 function renderProducts(){
@@ -2736,6 +2764,8 @@ function renderProducts(){
   if(sortVal === 'price-asc') list.sort((a,b)=>a.price-b.price);
   else if(sortVal === 'price-desc') list.sort((a,b)=>b.price-a.price);
   else if(sortVal === 'new') list.sort((a,b)=>b.id-a.id);
+  if(priceFilter) list = list.filter(p => p.price >= priceFilter[0] && (!priceFilter[1] || p.price < priceFilter[1]));
+  const rcEl = document.getElementById('resultCount'); if(rcEl) rcEl.textContent = list.length + ' sản phẩm';
   if(list.length === 0){
     grid.innerHTML = wishOnly
       ? `<div style="grid-column:1/-1; text-align:center; padding:50px 0; color:var(--navy-soft);">Bạn chưa yêu thích sản phẩm nào <i class='fa-regular fa-heart'></i></div>`
@@ -2982,8 +3012,10 @@ function hdVarNext(){
   q('.hdv-err').textContent = '';
   q('.hdv-qty').textContent = qty;
   q('.hdv-opts').innerHTML = p.variants.map(v => '<button type="button" class="hdv-opt" aria-pressed="false" data-v="' + fxEsc(v) + '">' + fxEsc(v) + '</button>').join('');
+  const prevFocus = document.activeElement;
   const finish = (add, buy) => {
     m.classList.remove('show');
+    if(!hdVarQueue.length && prevFocus && prevFocus.focus){ try{ prevFocus.focus({ preventScroll: true }); }catch(_){} }
     document.removeEventListener('keydown', onKey);
     if(add){
       addToCart(p.id, job.src, qty, job.srcEl, chosen);
@@ -2992,7 +3024,15 @@ function hdVarNext(){
     else hdTrack('variant_cancel', { productId: p.id, name: p.name });
     hdVarNext();
   };
-  const onKey = (e) => { if(e.key === 'Escape') finish(false); };
+  const onKey = (e) => {
+    if(e.key === 'Escape'){ finish(false); return; }
+    if(e.key !== 'Tab') return;
+    const f = [...m.querySelectorAll('button')].filter(b => !b.disabled && b.offsetParent !== null);
+    if(!f.length) return;
+    const a = f[0], z = f[f.length - 1];
+    if(e.shiftKey && document.activeElement === a){ e.preventDefault(); z.focus(); }
+    else if(!e.shiftKey && document.activeElement === z){ e.preventDefault(); a.focus(); }
+  };
   q('.hdv-opts').onclick = (e) => {
     const b = e.target.closest('.hdv-opt'); if(!b) return;
     chosen = b.dataset.v;
@@ -3701,6 +3741,7 @@ function openLightbox(p, src){
           <span class="price" style="font-size:24px;">${fmt(p.price)}</span>
         </div>
         <p style="font-size:13.5px; color:var(--navy-soft); line-height:1.6; margin-bottom:16px;">${p.desc}</p>
+        ${hdHasVariants(p) ? `<div class="qv-var"><div class="qv-var-label">Chọn ${fxEsc(String(p.variantLabel || 'phân loại').toLowerCase())}</div><div class="var-chips qv-chips" role="group">${p.variants.map(v => `<button type="button" class="var-chip${hdCardPick[p.id] === v ? ' on' : ''}" data-v="${fxEsc(v)}">${fxEsc(v)}</button>`).join('')}</div><div class="qv-var-err" role="alert"></div></div>` : ''}
         <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
           <span style="font-size:13px; font-weight:600;">Số lượng</span>
           <div class="qty-row" style="margin-top:0;">
@@ -3710,6 +3751,7 @@ function openLightbox(p, src){
           </div>
         </div>
         <div style="display:flex; gap:10px;">
+          <button class="btn hdv-buy" id="qvBuyBtn" style="flex:1;">Mua ngay</button>
           <button class="btn btn-primary" id="qvAddBtn" style="flex:1;"><i class="fa-solid fa-bag-shopping"></i> Thêm vào giỏ</button>
           <button class="wish-btn" id="qvWishBtn" style="position:static; width:46px; height:46px; border:1px solid var(--line);">${isWished ? "<i class=\"fa-solid fa-heart\"></i>" : "<i class=\"fa-regular fa-heart\"></i>"}</button>
         </div>
@@ -3721,10 +3763,26 @@ function openLightbox(p, src){
   hdQuickviewExtras(p);
   document.getElementById('qvMinus').onclick = () => { if(qvQty>1){ qvQty--; document.getElementById('qvQtyDisplay').textContent = qvQty; } };
   document.getElementById('qvPlus').onclick = () => { qvQty++; document.getElementById('qvQtyDisplay').textContent = qvQty; };
-  document.getElementById('qvAddBtn').onclick = () => {
-    addToCart(p.id, 'quickview', qvQty);
-    hdCloseLightbox();
+  let qvVar = hdHasVariants(p) && p.variants.includes(hdCardPick[p.id]) ? hdCardPick[p.id] : '';
+  const qvBox = document.querySelector('#lightboxBody .qv-chips');
+  if(qvBox) qvBox.onclick = (e) => {
+    const b = e.target.closest('.var-chip'); if(!b) return;
+    qvVar = b.dataset.v;
+    qvBox.querySelectorAll('.var-chip').forEach(x => x.classList.toggle('on', x === b));
+    const er = document.querySelector('#lightboxBody .qv-var-err'); if(er) er.textContent = '';
   };
+  const qvGo = (buy) => {
+    if(hdHasVariants(p) && !qvVar){
+      const er = document.querySelector('#lightboxBody .qv-var-err');
+      if(er) er.textContent = 'Vui lòng chọn ' + String(p.variantLabel || 'phân loại').toLowerCase() + ' trước khi thêm vào giỏ.';
+      return;
+    }
+    addToCart(p.id, 'quickview', qvQty, undefined, qvVar || undefined);
+    hdCloseLightbox();
+    if(buy && cartCount() > 0){ hdTrack('buy_now', { productId: p.id, name: p.name }); closeCart(); openCheckout(); }
+  };
+  document.getElementById('qvAddBtn').onclick = () => qvGo(false);
+  document.getElementById('qvBuyBtn').onclick = () => qvGo(true);
   document.getElementById('qvWishBtn').onclick = (e) => {
     if(wishlist.has(p.id)) wishlist.delete(p.id); else wishlist.add(p.id);
     hdTrack('wishlist_toggle', { productId: p.id, name: p.name, on: wishlist.has(p.id) });
