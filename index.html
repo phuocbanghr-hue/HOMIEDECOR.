@@ -1893,6 +1893,41 @@
   .var-chip:disabled, .var-chip.out, .hdv-opt:disabled{ opacity:.45; text-decoration:line-through; cursor:not-allowed; }
   .var-chip:disabled:hover{ border-color:var(--line); color:var(--navy); }
 </style>
+<style id="hd-polish4">
+  .poster-carousel{ padding:26px 0 0; }
+  .pc-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
+  .pc-head h2{ font-size:clamp(20px,2.4vw,26px); }
+  .pc-head a{ font-size:13.5px; font-weight:700; color:var(--cobalt); text-decoration:none; }
+  .pc-wrap{ position:relative; }
+  .pc-track{ display:flex; gap:14px; overflow-x:auto; scroll-snap-type:x mandatory; scroll-behavior:smooth; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding:4px 2px 12px; }
+  .pc-track::-webkit-scrollbar{ display:none; }
+  .pc-slide{
+    flex:0 0 calc((100% - 28px) / 3); scroll-snap-align:start; position:relative; border:none; padding:0; margin:0;
+    border-radius:18px; overflow:hidden; cursor:pointer; aspect-ratio:1/1; background:#f6c9a8; box-shadow:var(--shadow-soft);
+    transition:transform .25s ease, box-shadow .25s ease;
+  }
+  .pc-slide img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .pc-slide:hover{ transform:translateY(-4px); box-shadow:0 18px 32px rgba(0,0,0,0.16); }
+  .pc-cap{
+    position:absolute; left:0; right:0; bottom:0; padding:30px 14px 12px; display:flex; justify-content:space-between; align-items:flex-end; gap:8px;
+    color:#fff; background:linear-gradient(transparent, rgba(60,20,0,.66)); text-align:left; font-size:13px;
+  }
+  .pc-cap b{ font-family:'Baloo 2',sans-serif; font-size:15px; line-height:1.2; }
+  .pc-cap span{ font-weight:800; color:var(--sun); white-space:nowrap; }
+  .pc-nav{
+    position:absolute; top:50%; transform:translateY(-60%); width:42px; height:42px; border-radius:50%; border:none; z-index:2;
+    background:rgba(255,255,255,.94); box-shadow:0 4px 14px rgba(0,0,0,.22); cursor:pointer; font-size:24px; line-height:1; color:var(--navy);
+    display:flex; align-items:center; justify-content:center; transition:transform .15s ease, background .15s ease;
+  }
+  .pc-nav:hover{ background:var(--white); transform:translateY(-60%) scale(1.08); }
+  .pc-prev{ left:-14px; } .pc-next{ right:-14px; }
+  .pc-dots{ display:flex; justify-content:center; gap:6px; margin-top:4px; }
+  .pc-dot{ width:8px; height:8px; border-radius:999px; border:none; padding:0; background:rgba(0,0,0,.18); cursor:pointer; transition:width .2s ease, background .2s ease; }
+  .pc-dot.on{ width:22px; background:var(--cobalt); }
+  @media (max-width:900px){ .pc-slide{ flex-basis:calc((100% - 14px) / 2); } }
+  @media (max-width:560px){ .pc-slide{ flex-basis:82%; } .pc-nav{ display:none; } }
+  @media (prefers-reduced-motion: reduce){ .pc-track{ scroll-behavior:auto; } }
+</style>
 </head>
 <body>
 
@@ -2013,6 +2048,18 @@ el.addEventListener('animationend',function(e){if(e.animationName==='introOut')r
     <a class="photo-card" href="#products"><img src="images/banner-den-ngu-dong-vat.webp" alt="Đèn ngủ động vật dễ thương" width="900" height="852" loading="eager" decoding="async"></a>
     <a class="photo-card" href="#products"><img src="images/banner-du-che-mua.webp" alt="Dù che mưa xinh, đi đâu cũng chất" width="844" height="900" loading="lazy" decoding="async"></a>
     <a class="photo-card" href="#products"><img src="images/banner-decor-doc-dao.webp" alt="Sản phẩm decor độc đáo thêm điểm nhấn cho không gian" width="790" height="790" loading="lazy" decoding="async"></a>
+  </div>
+</section>
+
+<section class="poster-carousel" id="posterCarousel" aria-label="Sản phẩm nổi bật" hidden>
+  <div class="wrap">
+    <div class="pc-head"><h2>Sản phẩm nổi bật</h2><a href="#products">Xem tất cả →</a></div>
+    <div class="pc-wrap">
+      <button type="button" class="pc-nav pc-prev" aria-label="Xem trước">‹</button>
+      <div class="pc-track" id="pcTrack" tabindex="0" role="region" aria-label="Danh sách sản phẩm nổi bật, vuốt ngang để xem thêm"></div>
+      <button type="button" class="pc-nav pc-next" aria-label="Xem tiếp">›</button>
+    </div>
+    <div class="pc-dots" id="pcDots"></div>
   </div>
 </section>
 
@@ -2574,6 +2621,48 @@ function hdHasVariants(p){ return !!(p && Array.isArray(p.variants) && p.variant
 function hdQtyOfProduct(pid){ return Object.keys(cart).reduce((s, k) => cartPid(k) === Number(pid) ? s + cart[k] : s, 0); }
 function hdThumb(src){ return String(src || '').replace(/^(images\/sp-[a-z0-9-]+)\.webp$/, '$1-600.webp'); }   // ảnh 600px cho lưới; ảnh lớn dùng ở xem nhanh
 function hdVarSoldOut(p, v){ return !!(p && Array.isArray(p.soldOutVariants) && p.soldOutVariants.includes(v)); }
+let hdPcSig = '', hdPcTimer = null;
+function hdRenderPosters(){
+  const sec = document.getElementById('posterCarousel'); if(!sec) return;
+  const list = PRODUCTS.filter(p => p.image && /^images\/sp-/.test(p.image));
+  const sig = list.map(p => p.id + '|' + p.image + '|' + p.price).join(',');
+  if(sig === hdPcSig) return;
+  hdPcSig = sig;
+  sec.hidden = list.length < 3;
+  const track = document.getElementById('pcTrack'), dots = document.getElementById('pcDots');
+  track.innerHTML = list.map(p => '<button type="button" class="pc-slide" data-id="' + p.id + '" aria-label="Xem ' + fxEsc(p.name) + '"><img src="' + fxEsc(p.image) + '" alt="' + fxEsc(p.name) + '" loading="lazy" decoding="async"><span class="pc-cap"><b>' + fxEsc(p.name) + '</b><span>' + fmt(p.price) + '</span></span></button>').join('');
+  dots.innerHTML = list.map((p, i) => '<button type="button" class="pc-dot' + (i ? '' : ' on') + '" data-i="' + i + '" aria-label="Sản phẩm ' + (i + 1) + '"></button>').join('');
+  const slides = () => [...track.querySelectorAll('.pc-slide')];
+  const step = () => { const a = slides(); return a.length > 1 ? a[1].offsetLeft - a[0].offsetLeft : track.clientWidth; };
+  const goto = (i) => { const l = Math.max(0, i) * step(); if(track.scrollTo) track.scrollTo({ left: l, behavior: 'smooth' }); else track.scrollLeft = l; };
+  const cur = () => Math.round(track.scrollLeft / Math.max(1, step()));
+  const maxI = () => Math.max(0, Math.round((track.scrollWidth - track.clientWidth) / Math.max(1, step())));
+  const next = () => goto(cur() >= maxI() ? 0 : cur() + 1);
+  const prev = () => goto(cur() <= 0 ? maxI() : cur() - 1);
+  sec.querySelector('.pc-next').onclick = () => { next(); hdPcPause(); };
+  sec.querySelector('.pc-prev').onclick = () => { prev(); hdPcPause(); };
+  dots.onclick = (e) => { const b = e.target.closest('.pc-dot'); if(b){ goto(Number(b.dataset.i)); hdPcPause(); } };
+  track.onclick = (e) => {
+    const b = e.target.closest('.pc-slide'); if(!b) return;
+    const p = hdProd(b.dataset.id); if(!p) return;
+    hdTrack('poster_click', { productId: p.id, name: p.name });
+    openLightbox(p, 'poster');
+  };
+  let raf = 0;
+  track.onscroll = () => {
+    if(raf) return;
+    raf = requestAnimationFrame(() => { raf = 0; const c = Math.min(cur(), dots.children.length - 1); [...dots.children].forEach((d, i) => d.classList.toggle('on', i === c)); });
+  };
+  // tự trượt mỗi 4,5 giây; dừng khi rê chuột / chạm / đang focus / tab ẩn; tắt hẳn nếu khách chọn giảm chuyển động
+  const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let paused = false, resumeT = 0;
+  window.hdPcPause = () => { paused = true; clearTimeout(resumeT); resumeT = setTimeout(() => { paused = false; }, 9000); };
+  ['pointerenter', 'touchstart', 'focusin'].forEach(ev => sec.addEventListener(ev, () => { paused = true; clearTimeout(resumeT); }, { passive: true }));
+  ['pointerleave', 'touchend', 'focusout'].forEach(ev => sec.addEventListener(ev, () => { clearTimeout(resumeT); resumeT = setTimeout(() => { paused = false; }, 2500); }, { passive: true }));
+  clearInterval(hdPcTimer);
+  if(!reduce) hdPcTimer = setInterval(() => { if(!paused && !document.hidden && sec.getBoundingClientRect().bottom > 0 && sec.getBoundingClientRect().top < window.innerHeight) next(); }, 4500);
+}
+function hdPcPause(){}
 const hdCardPick = {};          // {productId: phân loại khách đã chạm chọn ngay trên thẻ}
 const hdRevealed = new Set();
 function hdRevealCards(grid){
@@ -2851,6 +2940,7 @@ function renderProducts(){
     };
   });
   hdRevealCards(grid);
+  hdRenderPosters();
 }
 function pulse(el){
   el.style.transform = 'scale(0.85)';
