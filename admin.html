@@ -678,7 +678,7 @@ function seedStock(){DB.items=XL.cat.map((c,n)=>({id:'K'+String(n+1).padStart(2,
 function linkAll(){const f=(n,v)=>(DB.items.find(i=>key(i.name,i.var)===key(n,v))||{}).id||null;
   DB.orders.forEach(o=>{if(o.item===undefined)o.item=f(o.name,o.var)});
   DB.imports.forEach(x=>{if(x.item===undefined){if(x.date==='2026-10-01'&&key(x.name,x.var)==='đèn ngủ động vật|panda')x.var='Panda nằm';x.item=f(x.name,x.var)}})}
-const DEFVAR={3:'Gấu trúc\nHải cẩu\nVịt nằm\nKhủng long',4:'Ngôi sao\nTrái đào\nQuả cam'};
+const DEFVAR={2:'Trắng\nXanh biển\nHồng',3:'Lúp pi\nLúp pi đội mũ\nPanda\nPanda nằm\nVịt\nThỏ',4:'Ngôi sao\nTrứng\nDâu\nCam',6:'Corgi\nMèo cam\nMèo mướp\nMèo đen\nChó Husky\nChó Shiba\nChó Poodle\nThỏ trắng\nGấu nâu\nVịt vàng\nWelcome Home\nHome Sweet Home',12:'Đen\nHồng\nXám'};
 function migrate(){DB.set=DB.set||{fee:{},last:{}};DB.set.fee=DB.set.fee||{};DB.set.last=DB.set.last||{};DB.items=DB.items||[];DB.moves=DB.moves||[];if(!DB.stockInit){if(!DB.items.length)seedStock();DB.stockInit=true}linkAll();DB.products.forEach(p=>{if(p.auto===undefined)p.auto=DB.items.some(i=>i.pid==p.id);if(p.variants===undefined&&DEFVAR[p.id])p.variants=DEFVAR[p.id]})}
 function stockMap(){const M={},now=Date.now();DB.items.forEach(i=>M[i.id]={open:i.open||0,imp:0,adj:0,sold:0,hold:0,w14:0});
   DB.imports.forEach(x=>{const m=M[x.item];if(m)m.imp+=x.qty||0});
