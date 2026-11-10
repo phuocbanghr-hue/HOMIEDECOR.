@@ -824,6 +824,11 @@
   .lightbox-icon{ width:100%; aspect-ratio:1/1; border-radius:10px; display:flex; align-items:center; justify-content:center; }
   .lightbox-caption{ text-align:center; font-weight:700; margin:12px 0 4px; color:var(--navy); }
   .qv-grid{ display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+  .qv-vbtn{ position:absolute; left:12px; bottom:12px; z-index:3; border:0; border-radius:99px; padding:8px 14px; background:rgba(20,20,30,.78); color:#fff; font:700 13px/1 inherit; font-family:inherit; cursor:pointer; display:inline-flex; gap:6px; align-items:center; box-shadow:0 6px 16px rgba(0,0,0,.25); }
+  .qv-vbtn:hover{ background:rgba(20,20,30,.92); }
+  .qv-media.qv-playing{ background:#000 !important; }
+  .qv-video{ width:100%; height:100%; object-fit:contain; background:#000; display:block; }
+  .qv-vclose{ position:absolute; right:10px; top:10px; z-index:4; border:0; border-radius:99px; padding:7px 12px; background:rgba(255,255,255,.92); color:#222; font:700 12.5px/1 inherit; font-family:inherit; cursor:pointer; }
   .qv-media{ position:relative; border-radius:12px; overflow:hidden; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; }
   .qv-media img{ width:100%; height:100%; object-fit:cover; image-rendering:-webkit-optimize-contrast; filter:url(#sharpenImg) contrast(1.06) saturate(1.05); }
   @media (max-width:600px){ .qv-grid{ grid-template-columns:1fr; } }
@@ -2559,13 +2564,13 @@ const PRODUCTS = [
   { id:3, variantLabel:"Mẫu", variants:["Lúp pi","Lúp pi đội mũ","Panda","Panda nằm","Vịt","Thỏ"], name:"Đèn ngủ động vật dễ thương", category:"Đèn ngủ", price:29000, originalPrice:34000, sold:0, rating:0, flash:false, image:"images/sp-3-den-thu-cute.webp", emoji:"<i class='fa-solid fa-paw'></i>", tag:"NEW", bg:"#f8e1d2", desc:"Đèn ngủ silicon mềm hình thú, ánh sáng vàng ấm dịu mắt. Có 6 mẫu: Lúp pi, Lúp pi đội mũ, Panda, Panda nằm, Vịt, Thỏ — chọn mẫu ngay khi thêm vào giỏ." },
   { id:4, variantLabel:"Mẫu", variants:["Ngôi sao","Trứng","Dâu","Cam"], name:"Ống cắm bút 2 ngăn dễ thương", category:"Kệ đựng đồ", price:25000, originalPrice:30000, sold:0, rating:0, flash:false, image:"images/sp-4-ong-cam-but.webp", emoji:"<i class='fa-solid fa-pen'></i>", tag:"NEW", bg:"#f3d9e3", desc:"Ống cắm bút 2 ngăn hoạ tiết dễ thương, để bàn học/bàn làm việc gọn gàng. Có 4 mẫu: Ngôi sao, Trứng, Dâu, Cam — chọn mẫu ngay khi thêm vào giỏ." },
   { id:5, name:"Đèn tulip", category:"Đèn ngủ", price:46000, originalPrice:51000, sold:0, rating:0, flash:false, image:"images/sp-5-den-hoa-tulip.webp", emoji:"<i class='fa-solid fa-lightbulb'></i>", tag:"NEW", bg:"#dce8f0", desc:"Đèn trang trí hộp mica trong suốt cắm hoa tulip xanh, có đèn LED lấp lánh bên trong, để bàn làm việc hoặc đầu giường." },
-  { id:6, variantLabel:"Mẫu", variants:["Corgi","Mèo cam","Chó Husky","Chó Shiba","Thỏ trắng","Gấu nâu"], name:"Thảm nỉ thú cưng dễ thương", category:"Thảm & chiếu", price:38000, originalPrice:43000, sold:0, rating:0, flash:false, image:"images/sp-6-tham-lau-chan.webp", emoji:"<i class='fa-solid fa-house'></i>", tag:"NEW", bg:"#dcebdd", desc:"Thảm nỉ hoạ tiết thú cưng dễ thương, trải cửa ra vào hoặc góc phòng đều xinh. Có 6 mẫu: Corgi, Mèo cam, Chó Husky, Chó Shiba, Thỏ trắng, Gấu nâu — chọn mẫu ngay khi thêm vào giỏ." },
+  { id:6, variantLabel:"Mẫu", variants:["Corgi","Mèo cam","Chó Husky","Chó Shiba","Thỏ trắng","Gấu nâu"], name:"Thảm nỉ thú cưng dễ thương", category:"Thảm & chiếu", price:38000, originalPrice:43000, sold:0, rating:0, flash:false, image:"images/sp-6-tham-lau-chan.webp", video:"video/sp-6-tham-ni.mp4", emoji:"<i class='fa-solid fa-house'></i>", tag:"NEW", bg:"#dcebdd", desc:"Thảm nỉ hoạ tiết thú cưng dễ thương, trải cửa ra vào hoặc góc phòng đều xinh. Có 6 mẫu: Corgi, Mèo cam, Chó Husky, Chó Shiba, Thỏ trắng, Gấu nâu — chọn mẫu ngay khi thêm vào giỏ." },
   { id:7, name:"Gương mây để bàn", category:"Gương & trang trí", price:45000, originalPrice:50000, sold:0, rating:0, flash:false, image:"images/sp-7-guong-may.webp", emoji:"<i class='fa-solid fa-cloud'></i>", tag:"NEW", bg:"#f8e1d2", desc:"Gương hình đám mây kèm đế gỗ, đặt bàn học, bàn trang điểm hay kệ đầu giường đều xinh, thêm chút ấm áp cho góc nhỏ." },
   { id:8, name:"Đèn ngủ thỏ", category:"Đèn ngủ", price:29000, originalPrice:34000, sold:0, rating:0, flash:false, image:"images/inline-e2e82234ac.webp", emoji:"<i class='fa-solid fa-moon'></i>", tag:"NEW", bg:"#dce8f0", desc:"Đèn ngủ silicon mềm hình thỏ, ánh sáng vàng ấm dịu mắt, để đầu giường hoặc bàn học." },
   { id:9, name:"Đèn ngủ vịt vàng", category:"Đèn ngủ", price:29000, originalPrice:34000, sold:0, rating:0, flash:false, image:"images/sp-9-den-vit-ngo-nghinh.webp", emoji:"<i class='fa-solid fa-moon'></i>", tag:"NEW", bg:"#f6ebc9", desc:"Đèn ngủ silicon mềm hình vịt vàng đứng chào, ánh sáng vàng ấm dịu mắt, để đầu giường hoặc bàn học." },
   { id:10, name:"Đèn ngủ panda", category:"Đèn ngủ", price:29000, originalPrice:34000, sold:0, rating:0, flash:false, image:"images/inline-d790fb5f2c.webp", emoji:"<i class='fa-solid fa-moon'></i>", tag:"NEW", bg:"#dce8f0", desc:"Đèn ngủ silicon mềm hình panda ngủ, ánh sáng vàng ấm dịu mắt, để đầu giường hoặc bàn học." },
   { id:11, name:"Đèn ngủ vịt", category:"Đèn ngủ", price:29000, originalPrice:34000, sold:0, rating:0, flash:false, image:"images/inline-70768be965.webp", emoji:"<i class='fa-solid fa-moon'></i>", tag:"NEW", bg:"#f6ebc9", desc:"Đèn ngủ silicon mềm hình vịt nằm, nhỏ gọn dễ thương, ánh sáng vàng ấm dịu mắt, trang trí mọi góc nhỏ." },
-  { id:12, variantLabel:"Màu", variants:["Đen","Hồng","Xám"], name:"Dù chống nắng chống mưa", category:"Dù & phụ kiện", price:55000, originalPrice:60000, sold:0, rating:0, flash:false, image:"images/sp-12-du-gap-uv.webp", emoji:"<i class='fa-solid fa-umbrella'></i>", tag:"NEW", bg:"#f8e1d2", desc:"Dù gấp gọn chống nắng chống mưa, có lớp chống UV, nhỏ gọn tiện lợi, bền bỉ, dễ mang theo trong túi." },
+  { id:12, variantLabel:"Màu", variants:["Đen","Hồng","Xám"], name:"Dù chống nắng chống mưa", category:"Dù & phụ kiện", price:55000, originalPrice:60000, sold:0, rating:0, flash:false, image:"images/sp-12-du-gap-uv.webp", video:"video/sp-12-du.mp4", emoji:"<i class='fa-solid fa-umbrella'></i>", tag:"NEW", bg:"#f8e1d2", desc:"Dù gấp gọn chống nắng chống mưa, có lớp chống UV, nhỏ gọn tiện lợi, bền bỉ, dễ mang theo trong túi." },
 ];
 // ⚠️ sold/rating ở trên là số thật ban đầu (0 vì sản phẩm chưa bán) — cập nhật tay sau khi có đơn/đánh giá thật.
 
@@ -3841,6 +3846,7 @@ function openLightbox(p, src){
     <div class="qv-grid">
       <div class="qv-media" style="background:${p.bg}">
         ${p.image ? `<img src="${p.image}" alt="${p.name}">` : `<span class="icon-badge" style="width:120px;height:120px;font-size:52px;">${p.emoji}</span>`}
+        ${p.video ? `<button type="button" class="qv-vbtn" aria-label="Xem video sản phẩm"><i class="fa-solid fa-play"></i> Xem video</button>` : ''}
         ${p.tag ? `<span class="card-tag tag-new" style="position:absolute;top:14px;left:14px;">${p.tag}</span>` : ''}
         ${discount ? `<span class="card-tag" style="position:absolute;top:14px;right:14px;background:var(--sun);color:var(--deep);">-${discount}%</span>` : ''}
       </div>
@@ -5187,7 +5193,10 @@ let hdQvId = 0;
 function hdQvBind(p){
   hdQvId = p.id;
   const m = document.querySelector('#lightboxBody .qv-media');
-  if(!m || !p.image) return;
+  if(!m) return;
+  const vb = m.querySelector('.qv-vbtn');
+  if(vb && p.video){ vb.onclick = e => { e.stopPropagation(); e.preventDefault(); const keep = m.innerHTML; m.onclick = null; m.onkeydown = null; m.removeAttribute('role'); m.classList.add('qv-playing'); m.innerHTML = '<video class="qv-video" src="' + fxEsc(p.video) + '" poster="' + fxEsc(p.image || '') + '" controls autoplay playsinline preload="metadata"></video><button type="button" class="qv-vclose"><i class="fa-solid fa-xmark"></i> Xem ảnh</button>'; m.querySelector('.qv-vclose').onclick = ev => { ev.stopPropagation(); const v = m.querySelector('video'); if(v) v.pause(); m.classList.remove('qv-playing'); m.innerHTML = keep; hdQvBind(p); }; }; }
+  if(!p.image) return;
   m.setAttribute('role', 'button'); m.setAttribute('tabindex', '0'); m.setAttribute('aria-label', 'Xem ảnh lớn của ' + p.name);
   m.onclick = () => hdZoomOpen(p.image, p.name);
   m.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); hdZoomOpen(p.image, p.name); } };
