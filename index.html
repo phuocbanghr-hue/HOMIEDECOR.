@@ -5770,6 +5770,33 @@ async function hdSubmitLead(phone, question){
   }catch(_){}
   hdTrack('chat_lead', { label: 'ok' });
 }
+/* ---------- AI (Gemini): chỉ gọi khi bot từ khoá "chịu" câu hỏi ---------- */
+const hdAiHist = [];
+function hdAiOn(){ return !!(window.HD_AI && window.HD_AI.key && String(window.HD_AI.key).length > 20); }
+function hdAiSystem(){
+  const prods = PRODUCTS.filter(p => !p.hidden).map(p => '- ' + p.name + ' (' + p.category + '): ' + fmt(p.price) + (p.variants && p.variants.length ? ' · ' + (p.variantLabel || 'Mẫu') + ': ' + p.variants.join(', ') : '') + ' — ' + String(p.desc || '').slice(0, 140)).join('\n');
+  const faq = (typeof FAQ_ITEMS !== 'undefined' ? FAQ_ITEMS : []).map(x => 'H: ' + x.q + '\nĐ: ' + x.a).join('\n').slice(0, 2500);
+  return 'Bạn là Homie Bot, trợ lý bán hàng thân thiện của cửa hàng đồ decor nhỏ xinh Homie Decor (Đà Nẵng). Trả lời bằng tiếng Việt, ngắn gọn (tối đa 3-4 câu), giọng dễ thương, xưng "mình", gọi khách là "bạn". ' +
+    'Chỉ nói về sản phẩm, đặt hàng, giao hàng, đổi trả của Homie Decor, dựa đúng vào dữ liệu dưới đây. KHÔNG bịa giá, khuyến mãi hay thông tin không có; nếu không chắc hãy mời khách nhắn Messenger hoặc gọi ' + HD_BOT.phone + '. Địa chỉ: ' + HD_BOT.address + '. Không dùng markdown, không dùng dấu *.\n\nSẢN PHẨM:\n' + prods + '\n\nCÂU HỎI THƯỜNG GẶP:\n' + faq;
+}
+async function hdAiAsk(text){
+  const c = window.HD_AI, model = c.model || 'gemini-2.5-flash';
+  const base = /^AIza/.test(c.key) ? 'https://generativelanguage.googleapis.com/v1beta/models/' : 'https://aiplatform.googleapis.com/v1/publishers/google/models/';
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 14000);
+  try{
+    const body = { systemInstruction: { parts: [{ text: hdAiSystem() }] },
+      contents: hdAiHist.slice(-6).concat([{ role: 'user', parts: [{ text }] }]),
+      generationConfig: { temperature: 0.5, maxOutputTokens: 600, thinkingConfig: { thinkingBudget: 0 } } };
+    const res = await fetch(base + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(c.key), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctl.signal });
+    if(!res.ok) throw new Error('AI ' + res.status);
+    const j = await res.json();
+    const out = (((j.candidates || [])[0] || {}).content || {}).parts;
+    const t = out ? out.map(x => x.text || '').join('').trim() : '';
+    if(!t) throw new Error('AI empty');
+    hdAiHist.push({ role: 'user', parts: [{ text }] }, { role: 'model', parts: [{ text: t }] });
+    return t;
+  } finally { clearTimeout(to); }
+}
 async function hdChatSend(text, via){
   text = String(text || '').trim().slice(0, 300);
   if(!text || hdChat.busy) return;
@@ -5777,13 +5804,25 @@ async function hdChatSend(text, via){
   hdChat.lastQ = text;
   hdBubble('user', text);
   hdChat.n++;
-  const r = hdBotBrain(text);
+  let r = hdBotBrain(text);
   if(!r.matched) hdChat.lastMiss = text;
+  let aiUsed = false;
+  if(!r.matched && hdAiOn()){
+    const tp = document.createElement('div');
+    tp.className = 'chat-msg bot chat-typing'; tp.innerHTML = '<span></span><span></span><span></span>';
+    hdEl('chatBody').appendChild(tp); hdChatScroll();
+    try{
+      const t = await hdAiAsk(text);
+      tp.remove();
+      r = hdReply(hdEsc(t).replace(/\n+/g, '<br>'), { intent: 'ai', actions: ['messenger'], chips: ['Sản phẩm dưới 30K', 'Phí ship & giao hàng', 'Cách đặt hàng'] });
+      aiUsed = true;
+    }catch(_){ tp.remove(); }
+  }
   hdTrack('chat_message', { text: hdCut(text, 300), intent: r.intent, matched: r.matched, products: r.products.map(p => p.id).join(','), via: via || 'typed', n: hdChat.n });
   const typing = document.createElement('div');
   typing.className = 'chat-msg bot chat-typing'; typing.innerHTML = '<span></span><span></span><span></span>';
   hdEl('chatBody').appendChild(typing); hdChatScroll();
-  await hdSleep(Math.min(320 + r.html.length * 3, 1100));
+  await hdSleep(aiUsed ? 200 : Math.min(320 + r.html.length * 3, 1100));
   typing.remove();
   hdBubble('bot', r.html, true);
   if(r.products.length) hdAddProducts(r.products);
@@ -5835,6 +5874,7 @@ try{
 }catch(_){}
 </script>
 <script src="firebase-config.js"></script>
+<script src="ai-config.js"></script>
 <script>
 /* =========================================================
    ĐỒNG BỘ VỚI TRANG ADMIN (Firestore, cập nhật trực tiếp)
