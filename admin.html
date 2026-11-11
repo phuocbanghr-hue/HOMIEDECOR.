@@ -1452,7 +1452,9 @@ migrate=function(){_mig();
  if(!DB.goals||typeof DB.goals!=='object')DB.goals={};
  const cut=Date.now()-60*864e5;DB.trash=DB.trash.filter(x=>new Date(x.t)>cut);
  (DB.products||[]).forEach(p=>{if(!Array.isArray(p.imgs))p.imgs=[]});
- (DB.members||[]).forEach(m=>{if(m.pi==null)m.pi=0})};
+ (DB.members||[]).forEach(m=>{if(m.pi==null)m.pi=0});
+ if(DB.byVer!=='1'){const act=actives();if(act.length){const C={};act.forEach(m=>C[m.id]=0);DB.orders.forEach(o=>{const m=memByName(o.by);if(m&&C[m.id]!=null)C[m.id]++});
+  DB.orders.slice().sort((a,b)=>String(a.id).localeCompare(String(b.id))).forEach(o=>{if(String(o.by||'').trim())return;const id=act.map(m=>m.id).sort((a,b)=>C[a]-C[b])[0];o.by=mem(id).short;C[id]++});DB.byVer='1';setDirty(true)}}};
 
 /* mở trang: hỏi người thao tác */
 const _boot=boot;
