@@ -722,10 +722,10 @@ function renderHome0(){const O=DB.orders,ok=okO().filter(o=>inRange(o,HR)),rev=s
   let vc=0,vr=0,units=0;DB.items.forEach(i=>{const o=Math.max(0,SM[i.id].on),p=DB.products.find(x=>x.id==i.pid);units+=o;vc+=o*(i.cost||0);vr+=o*(p?p.price:0)});
   $('kpis').innerHTML=[['k0'+(pf<0?' bad':''),'fa-sack-dollar','Lợi nhuận',fmt(pf),'Thực nhận − vốn nhập − chi phí vận hành'],['k1','fa-wallet','Doanh thu thực nhận',fmt(rev),'Đã trừ giảm giá và phí sàn'],['k2','fa-receipt','Số đơn',O.length,'Trung bình '+fmt(rev/(ok.length||1))+'/đơn'],['k3','fa-truck-ramp-box','Vốn đã nhập',fmt(imp),DB.imports.length+' lần nhập'],['k4','fa-warehouse','Vốn đang nằm trong kho',fmt(vc),`${units} sản phẩm, bán hết thu ~${fmt(vr)}`]].map(k=>`<div class="kpi ${k[0]}"><i class="fa-solid ${k[1]}"></i><small>${k[2]}</small><b>${k[3]}</b><span>${k[4]}</span></div>`).join('');
   const by=(a,k,f)=>{const m={};a.forEach(o=>{const x=o[k]||'Khác';m[x]=(m[x]||0)+f(o)});return Object.entries(m).sort((a,b)=>b[1]-a[1])};
-  const chs=by(ok,'ch',o=>o.rev),col=['#e8795a','#4f7fe0','#f2b84b','#5db8a0','#b48ad6'];let acc=0;
-  $('ring').style.background=chs.length&&rev?`conic-gradient(${chs.map((c,i)=>{const s=acc;acc+=c[1]/rev*100;return`${col[i%5]} ${s}% ${acc}%`}).join(',')})`:'var(--bg)';
+  const gr=o=>o.gross!=null?o.gross:(o.qty||0)*(o.price||0),grT=sum(ok,gr),chs=by(ok,'ch',gr),col=['#e8795a','#4f7fe0','#f2b84b','#5db8a0','#b48ad6'];let acc=0;
+  $('ring').style.background=chs.length&&grT?`conic-gradient(${chs.map((c,i)=>{const s=acc;acc+=c[1]/grT*100;return`${col[i%5]} ${s}% ${acc}%`}).join(',')})`:'var(--bg)';
   $('ringT').innerHTML=`${chs.length}<small>kênh bán</small>`;
-  $('lg').innerHTML=chs.map((c,i)=>`<div><i style="background:${col[i%5]}"></i><b>${esc(c[0])}</b> ${fmt(c[1])} <span class="hint">(${Math.round(c[1]/(rev||1)*100)}%)</span></div>`).join('');
+  $('lg').innerHTML=chs.map((c,i)=>`<div><i style="background:${col[i%5]}"></i><b>${esc(c[0])}</b> ${fmt(c[1])} <span class="hint">(${Math.round(c[1]/(grT||1)*100)}%)</span></div>`).join('');
   const tp=by(ok,'name',o=>o.profit).slice(0,6),mx=tp[0]?tp[0][1]:1;
   $('topP').innerHTML=tp.map(t=>`<div class="hb"><span>${esc(t[0])}</span><div class="t"><i style="width:${Math.max(0,t[1]/mx*100)}%"></i></div><b>${fmt(t[1])}</b></div>`).join('');
   const st=by(ok,'by',o=>o.rev).filter(s=>s[0]!=='Khác'),ms=st[0]?st[0][1]:1;
@@ -1727,7 +1727,7 @@ function renderRep(){const R=repData(RP),{ok,ex,rev,pf,exT,imv,net}=R,r=pRange(R
  $$('#xrp button').forEach(b=>b.classList.toggle('on',b.dataset.r===RP));
  const D=[];for(let d=new Date(r.from+'T12:00:00');iso(d)<=r.to&&D.length<62;d.setDate(d.getDate()+1))D.push(iso(d));while(D.length<2){const d=new Date(D[0]+'T12:00:00');d.setDate(d.getDate()-1);D.unshift(iso(d))}
  const dv=D.map(d=>sum(ok.filter(o=>o.date===d),o=>o.rev)),area=areaSVG(D,dv).split('id="ag"').join('id="xag"').split('url(#ag)').join('url(#xag)');
- const chs=byc(ok,'ch',o=>o.rev),chM=chs[0]?chs[0][1]:1,pr=byc(ok,'name',o=>o.profit).slice(0,8),prM=pr[0]?Math.max(1,pr[0][1]):1;
+ const chs=byc(ok,'ch',o=>o.gross!=null?o.gross:(o.qty||0)*(o.price||0)),chM=chs[0]?chs[0][1]:1,pr=byc(ok,'name',o=>o.profit).slice(0,8),prM=pr[0]?Math.max(1,pr[0][1]):1;
  const ec=byc(ex,'cat',e=>e.amount||0),ecM=ec[0]?ec[0][1]:1;
  const mb={};ok.forEach(o=>{const m=memByName(o.by),k=m?m.id:'_';(mb[k]=mb[k]||{n:0,rev:0,pf:0}).n++;mb[k].rev+=o.rev;mb[k].pf+=o.profit});
  const ml=Object.entries(mb).sort((a,b)=>b[1].rev-a[1].rev),mlM=ml[0]?Math.max(1,ml[0][1].rev):1;
